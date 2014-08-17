@@ -31,29 +31,11 @@ var styleConfigurationSheet = configurationDocument.getSheetByName("StyleConfigu
 var landingConfigurationSheet = configurationDocument.getSheetByName("LandingConfiguration");
 var pageConfigurationSheet = configurationDocument.getSheetByName("PageConfiguration");
 var informationConfigurationSheet = configurationDocument.getSheetByName("InformationConfiguration");
-//var initialMenu = [ {name: "Initialize", functionName: "initialize"} ];
 var menuEntries = [{name: "Initialize Configuration", functionName: "initialize"},
                    {name: "Update Configuration" + configurationDocument.getName() + " configuration", functionName: "updateConfiguration"},
                    {name: "Display DocumentId", functionName: "displayConfigurationDocumentId"} ];
 
 function onOpen() {
-  //var headers = {};
-  //var payload = {};
-  //var options = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:payload};
-  //var url = "https://" + configurationDocumentName + ".appspot.com/isInitialized";
-  //Browser.msgBox("Fetching Url");
-  //var responseCode = UrlFetchApp.fetch(url, options).getResponseCode();
-  //if (responseCode == 204) {
-  //  Browser.msgBox("Not Initialized");
-  //  MailApp.sendEmail({
-  //    to: "siteswrapper-gae-gwt@" + configurationDocumentName + ".appspotmail.com",
-  //    subject: configurationDocumentName,
-  //    body: configurationDocumentId });
-  //  configurationDocument.addMenu(configurationDocument.getName(), initialMenu);
-  //} else if (responseCode == 202) {
-  //  Browser.msgBox("Initialized");
-  //  configurationDocument.addMenu(configurationDocument.getName(), menuEntries);
-  //}
   configurationDocument.addMenu("SitesWrapper", menuEntries);
 }
 
@@ -68,6 +50,47 @@ function initialize () {
       to: "siteswrapper-gae-gwt@" + configurationDocumentName + ".appspotmail.com",
       subject: configurationDocumentName,
       body: configurationDocumentId });
+    while (responseCode != 202) {
+      responseCode = UrlFetchApp.fetch(url, options).getResponseCode();
+    }
+    var activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    activeSpreadsheet.renameActiveSheet("SiteConfiguration");
+    var sheet = activeSpreadsheet.getActiveSheet();
+    sheet.appendRow(["Site Name", "My Site"]);
+    sheet.appendRow(["Google App Engine Application", "towingenterpriseexecutive"]);
+    sheet.appendRow(["Google App Engine Version", "1"]);
+    sheet.appendRow(["Look And Feel", "Ghost"]);
+    sheet.appendRow(["Theme", "Charcoal"]);
+    sheet.appendRow(["Google Web Fonts Url", "http://fonts.googleapis.com/css?family=Aldrich|Raleway:100|Open+Sans:300,400"]);
+    sheet.appendRow(["Favicon Url", "http://ghostgames.com/favicon.ico"]);
+    sheet.appendRow(["Apple Touch Icon Url", "http://ssl.gstatic.com/sites/p/fff931/system/app/images/apple-touch-icon.png"]);
+    sheet.appendRow(["Default Page", "About Us"]);
+    sheet.appendRow(["Information Item Display Style", "Bottom"]);
+    sheet.appendRow(["Revision History Enabled", "No"]);
+    sheet.appendRow(["Logo Image", "http://googledrive.com/host/0B1wQZ0ttBuUaZVpyNkdKYnRobnc/Logo.png"]);
+    sheet.appendRow(["Logo Html", "<h1><span style='font-family:Aldrich,arial,sans-serif;font-style:italic;font-weight:normal'><font color=#ffffff>The</font><font color=#00ff00>Green</font><font color=#ffffff>URL</font></span><sup><font color=#ffffff size=2>&reg;</font></sup></h1>"]);
+    sheet.appendRow(["Display Logo As", "Html"]);
+    sheet.appendRow(["Site Footer", "<p>My Site Footer</p>"]);
+    sheet.appendRow(["Gwt Rpc Error Message", "Network Error - Check your network connection"]);
+    sheet.setColumnWidth(1, 200);
+    sheet.setColumnWidth(2, 500);
+    activeSpreadsheet.insertSheet('StyleConfiguration', 1);
+    sheet = activeSpreadsheet.setActiveSheet(activeSpreadsheet.getSheets()[1]);
+    sheet.appendRow(["Look And Feel", "URL IS/IT", "Koninklijke", "Ghost"]);
+    sheet.appendRow(["Description", "Looks like URL IS/IT's home page urlisit.com", "Reminiscent of www.usa.lighting.philips.com", "Classy minimalist back and white theme with red highlites in the spirit of Ghosts in Gothenburg ghostgames.com"]);
+    sheet.appendRow(["Primary Color", "#101010", "#ffffff", "#000000"]);
+    sheet.appendRow(["Primary Accent Color", "#d6d6d6", "#228B22", "#ffffff"]);
+    sheet.appendRow(["Secondary Accent Color", "#aaaaaa", "#4169E1", "#ff0000"]);
+    sheet.appendRow(["Tertiary Accent Color", "#eeeeee", "#00ff00", "#a4a4a4"]);
+    sheet.appendRow(["Main Menu Font Family", "Open+Sans", "Raleway", "Open+Sans"]);
+    sheet.appendRow(["Main Menu Font Size", "14px", "14px", "13px"]);
+    sheet.appendRow(["Main Menu Selection Font Color", "#ffffff", "#228B22", "#ffffff"]);
+    sheet.appendRow(["Main Menu Hover Font Color", "#0000ff", "#0000ff", "#fffc00"]);
+    sheet.appendRow(["Main Menu Selected Font Color", "#fffc00", "#00ff00", "#ff0000"]);
+    sheet.setColumnWidth(1, 300);
+    sheet.setColumnWidth(2, 300);
+    sheet.setColumnWidth(3, 300);
+    sheet.setColumnWidth(4, 300);
   } else if (responseCode == 202) {
     Browser.msgBox("Already Initialized");
   }
