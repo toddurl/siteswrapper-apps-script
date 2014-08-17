@@ -11,7 +11,6 @@
  * WARRANTIES OR CONDITIONS OF ANY KIND, either  express  or  implied.  See  the
  * License for the specific language governing permissions and limitations under
  * the License. */
-
 var DEBUG = new Boolean(false);
 //var siteUrl = "http://50.39.195.224:8888"
 var siteUrl = "https://urlisit.appspot.com"
@@ -31,11 +30,29 @@ var styleConfigurationSheet = configurationDocument.getSheetByName("StyleConfigu
 var landingConfigurationSheet = configurationDocument.getSheetByName("LandingConfiguration");
 var pageConfigurationSheet = configurationDocument.getSheetByName("PageConfiguration");
 var informationConfigurationSheet = configurationDocument.getSheetByName("InformationConfiguration");
+//var initialMenu = [ {name: "Initialize", functionName: "initialize"} ];
 var menuEntries = [{name: "Initialize Configuration", functionName: "initialize"},
                    {name: "Update Configuration" + configurationDocument.getName() + " configuration", functionName: "updateConfiguration"},
                    {name: "Display DocumentId", functionName: "displayConfigurationDocumentId"} ];
 
 function onOpen() {
+  //var headers = {};
+  //var payload = {};
+  //var options = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:payload};
+  //var url = "https://" + configurationDocumentName + ".appspot.com/isInitialized";
+  //Browser.msgBox("Fetching Url");
+  //var responseCode = UrlFetchApp.fetch(url, options).getResponseCode();
+  //if (responseCode == 204) {
+  //  Browser.msgBox("Not Initialized");
+  //  MailApp.sendEmail({
+  //    to: "siteswrapper-gae-gwt@" + configurationDocumentName + ".appspotmail.com",
+  //    subject: configurationDocumentName,
+  //    body: configurationDocumentId });
+  //  configurationDocument.addMenu(configurationDocument.getName(), initialMenu);
+  //} else if (responseCode == 202) {
+  //  Browser.msgBox("Initialized");
+  //  configurationDocument.addMenu(configurationDocument.getName(), menuEntries);
+  //}
   configurationDocument.addMenu("SitesWrapper", menuEntries);
 }
 
@@ -91,6 +108,74 @@ function initialize () {
     sheet.setColumnWidth(2, 300);
     sheet.setColumnWidth(3, 300);
     sheet.setColumnWidth(4, 300);
+    activeSpreadsheet.insertSheet('LandingConfiguration', 2);
+    sheet = activeSpreadsheet.setActiveSheet(activeSpreadsheet.getSheets()[2]);
+    sheet.appendRow(["Name", "URLeCycle", "URLX-15", "VZ-8 SkyUTV", "SchwimmUTV"]);
+    sheet.appendRow(["Type", "Page", "Page", "Page", "Page"]);
+    sheet.appendRow(["Description", "Sporting a 1.21 gigawatt cobalt60 RTG powered DAYMAK front wheel, the URLiCycle is the ultimate in power-assist electric bicycles. In keeping with DAYMAK's clean simple aesthetic look, there are no break, gear, throttle or controller cables visible on the bike as it's completely 802.11n fly by wireless. Whether you live to ride, or ride to live, the URLeCycle is guaranteed to leave you breathless.", "With a Reaction Motors XLR-99 engine delivering 60,000 pounds of thrust and an Inconel-X heat-resistant fuselage, the URLX-15 is easly capable of attaining it's operational altitude of 60 miles or a top speed of 4,500 miles per hour.", "The Piasecki VZ-8 Sky UTV features two tandem, three-blade ducted rotors, with the crew of two seated between the two rotors. Power is handled by a Chevy 350 LT1 small block V8 piston engine, driving the rotors by a central gearbox.", "The Schwimmwagen amphibious UTV, which resembles a small highly manueverable 4-wheel drive sports car, is at home on water as it is in ruff terrain. It features a 4-stroke 4-cylinder horizontally-opposed air-cooled 1,131 cc German motor, 5 speed transaxle with ZF self-locking differentials on both the front and rear axles. When crossing water the three bade propeller is lowered from the rear deck engine cover and folded back up when not in use."]);
+    sheet.appendRow(["Video Url", "http://youtu.be/_Ld83b7PC6w", "http://youtu.be/Jdq_l-8PNPA", "http://youtu.be/4SERvwWALOM", "http://youtu.be/A3ArELSi_K4"]);
+    sheet.appendRow(["Image Url", "https://lh6.googleusercontent.com/-ZNl9jqIj5Hg/TepZHNGTWsI/AAAAAAAAAFU/XaTsnlcygLY/5.png", "http://lh6.googleusercontent.com/-CRkMobJTCsY/TekPSN6Ir3I/AAAAAAAAAEo/cJYgdcZyka8/3.png", "http://lh5.googleusercontent.com/-qj5ulShqEOo/TbgIHiby9PI/AAAAAAAAABc/JwNpT2j8AeA/1.png", "http://lh5.googleusercontent.com/-aTv3UQdMlgU/Te00HsQJMHI/AAAAAAAAAHE/lauRwOluexY/1.png"]);
+    sheet.appendRow(["Link Name", "CRV Sales", "CRV Sales USA", "CRV Sales LLC", "Ironman"]);
+    sheet.appendRow(["Link Url", "http://crvsalesusa.appspot.com/unavailableItem?item=8&image=3", "http://crvsalesusa.appspot.com/unavailableItem?item=10&image=2", "http://crvsalesusa.appspot.com/unavailableItem?item=9&image=5", "http://crvsalesusa.appspot.com/unavailableItem?item=11&image=1"]);
+    sheet.appendRow(["Specification One", "Price", "Price", "Price", "Price"]);
+    sheet.appendRow(["Value One", "$1,210,000.00", "Please call for availability and pricing", "$99,999.99", "Call"]);
+    sheet.appendRow(["Specification Two", "", "", "", ""]);
+    sheet.appendRow(["Value Two", "", "", "", ""]);
+    sheet.appendRow(["Specification Three", "", "", "", ""]);
+    sheet.appendRow(["Value Three", "", "", "", ""]);
+    sheet.appendRow(["Specification Four", "", "", "", ""]);
+    sheet.appendRow(["Value Four", "", "", "", ""]);
+    sheet.appendRow(["Specification Five", "", "", "", ""]);
+    sheet.appendRow(["Value Five", "", "", "", ""]);
+    sheet.appendRow(["Specification Six", "", "", "", ""]);
+    sheet.appendRow(["Value Six", "", "", "", ""]);
+    sheet.appendRow(["Specification Seven", "", "", "", ""]);
+    sheet.appendRow(["Value Seven", "", "", "", ""]);
+    sheet.appendRow(["Specification Eight", "", "", "", ""]);
+    sheet.appendRow(["Value Eight", "", "", "", ""]);
+    sheet.appendRow(["Specification Nine", "", "", "", ""]);
+    sheet.appendRow(["Value Nine", "", "", "", ""]);
+    sheet.appendRow(["Specification Ten", "", "", "", ""]);
+    sheet.appendRow(["Value Ten", "", "", "", ""]);
+    sheet.setColumnWidth(1, 175);
+    sheet.setColumnWidth(2, 250);
+    sheet.setColumnWidth(3, 250);
+    sheet.setColumnWidth(4, 250);
+    sheet.setColumnWidth(5, 250);
+    activeSpreadsheet.insertSheet('InformationConfiguration', 3);
+    sheet = activeSpreadsheet.setActiveSheet(activeSpreadsheet.getSheets()[3]);
+    sheet.appendRow(["Name", "URLeCycle", "URLX-15", "VZ-8 SkyUTV", "SchwimmUTV"]);
+    sheet.appendRow(["Type", "Page", "Page", "Page", "Page"]);
+    sheet.appendRow(["Description", "Sporting a 1.21 gigawatt cobalt60 RTG powered DAYMAK front wheel, the URLiCycle is the ultimate in power-assist electric bicycles. In keeping with DAYMAK's clean simple aesthetic look, there are no break, gear, throttle or controller cables visible on the bike as it's completely 802.11n fly by wireless. Whether you live to ride, or ride to live, the URLeCycle is guaranteed to leave you breathless.", "With a Reaction Motors XLR-99 engine delivering 60,000 pounds of thrust and an Inconel-X heat-resistant fuselage, the URLX-15 is easly capable of attaining it's operational altitude of 60 miles or a top speed of 4,500 miles per hour.", "The Piasecki VZ-8 Sky UTV features two tandem, three-blade ducted rotors, with the crew of two seated between the two rotors. Power is handled by a Chevy 350 LT1 small block V8 piston engine, driving the rotors by a central gearbox.", "The Schwimmwagen amphibious UTV, which resembles a small highly manueverable 4-wheel drive sports car, is at home on water as it is in ruff terrain. It features a 4-stroke 4-cylinder horizontally-opposed air-cooled 1,131 cc German motor, 5 speed transaxle with ZF self-locking differentials on both the front and rear axles. When crossing water the three bade propeller is lowered from the rear deck engine cover and folded back up when not in use."]);
+    sheet.appendRow(["Video Url", "http://youtu.be/_Ld83b7PC6w", "http://youtu.be/Jdq_l-8PNPA", "http://youtu.be/4SERvwWALOM", "http://youtu.be/A3ArELSi_K4"]);
+    sheet.appendRow(["Image Url", "https://lh6.googleusercontent.com/-ZNl9jqIj5Hg/TepZHNGTWsI/AAAAAAAAAFU/XaTsnlcygLY/5.png", "http://lh6.googleusercontent.com/-CRkMobJTCsY/TekPSN6Ir3I/AAAAAAAAAEo/cJYgdcZyka8/3.png", "http://lh5.googleusercontent.com/-qj5ulShqEOo/TbgIHiby9PI/AAAAAAAAABc/JwNpT2j8AeA/1.png", "http://lh5.googleusercontent.com/-aTv3UQdMlgU/Te00HsQJMHI/AAAAAAAAAHE/lauRwOluexY/1.png"]);
+    sheet.appendRow(["Link Name", "CRV Sales", "CRV Sales USA", "CRV Sales LLC", "Ironman"]);
+    sheet.appendRow(["Link Url", "http://crvsalesusa.appspot.com/unavailableItem?item=8&image=3", "http://crvsalesusa.appspot.com/unavailableItem?item=10&image=2", "http://crvsalesusa.appspot.com/unavailableItem?item=9&image=5", "http://crvsalesusa.appspot.com/unavailableItem?item=11&image=1"]);
+    sheet.appendRow(["Specification One", "Price", "Price", "Price", "Price"]);
+    sheet.appendRow(["Value One", "$1,210,000.00", "Please call for availability and pricing", "$99,999.99", "Call"]);
+    sheet.appendRow(["Specification Two", "", "", "", ""]);
+    sheet.appendRow(["Value Two", "", "", "", ""]);
+    sheet.appendRow(["Specification Three", "", "", "", ""]);
+    sheet.appendRow(["Value Three", "", "", "", ""]);
+    sheet.appendRow(["Specification Four", "", "", "", ""]);
+    sheet.appendRow(["Value Four", "", "", "", ""]);
+    sheet.appendRow(["Specification Five", "", "", "", ""]);
+    sheet.appendRow(["Value Five", "", "", "", ""]);
+    sheet.appendRow(["Specification Six", "", "", "", ""]);
+    sheet.appendRow(["Value Six", "", "", "", ""]);
+    sheet.appendRow(["Specification Seven", "", "", "", ""]);
+    sheet.appendRow(["Value Seven", "", "", "", ""]);
+    sheet.appendRow(["Specification Eight", "", "", "", ""]);
+    sheet.appendRow(["Value Eight", "", "", "", ""]);
+    sheet.appendRow(["Specification Nine", "", "", "", ""]);
+    sheet.appendRow(["Value Nine", "", "", "", ""]);
+    sheet.appendRow(["Specification Ten", "", "", "", ""]);
+    sheet.appendRow(["Value Ten", "", "", "", ""]);
+    sheet.setColumnWidth(1, 175);
+    sheet.setColumnWidth(2, 250);
+    sheet.setColumnWidth(3, 250);
+    sheet.setColumnWidth(4, 250);
+    sheet.setColumnWidth(5, 250);
   } else if (responseCode == 202) {
     Browser.msgBox("Already Initialized");
   }
