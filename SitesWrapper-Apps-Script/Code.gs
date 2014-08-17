@@ -18,6 +18,7 @@ var siteUrl = "https://urlisit.appspot.com"
 var configurationDocument = SpreadsheetApp.getActiveSpreadsheet();
 var configurationDocumentId = configurationDocument.getId();
 var configurationDocumentUrl = configurationDocument.getUrl();
+var configurationDocumentName = configurationDocument.getName();
 var siteUpdateUri = "/" + configurationDocumentId + "/updateSite";
 var styleUpdateUri = "/" + configurationDocumentId + "/updateStyle";
 var landingUpdateUri = "/" + configurationDocumentId + "/updateLanding";
@@ -30,11 +31,46 @@ var styleConfigurationSheet = configurationDocument.getSheetByName("StyleConfigu
 var landingConfigurationSheet = configurationDocument.getSheetByName("LandingConfiguration");
 var pageConfigurationSheet = configurationDocument.getSheetByName("PageConfiguration");
 var informationConfigurationSheet = configurationDocument.getSheetByName("InformationConfiguration");
-var menuEntries = [ {name: "Update " + configurationDocument.getName() + " configuration", functionName: "updateConfiguration"},
-                    {name: "Display configurationDocumentId", functionName: "displayConfigurationDocumentId"} ];
+//var initialMenu = [ {name: "Initialize", functionName: "initialize"} ];
+var menuEntries = [{name: "Initialize Configuration", functionName: "initialize"},
+                   {name: "Update Configuration" + configurationDocument.getName() + " configuration", functionName: "updateConfiguration"},
+                   {name: "Display DocumentId", functionName: "displayConfigurationDocumentId"} ];
 
 function onOpen() {
-  configurationDocument.addMenu(configurationDocument.getName(), menuEntries);
+  //var headers = {};
+  //var payload = {};
+  //var options = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:payload};
+  //var url = "https://" + configurationDocumentName + ".appspot.com/isInitialized";
+  //Browser.msgBox("Fetching Url");
+  //var responseCode = UrlFetchApp.fetch(url, options).getResponseCode();
+  //if (responseCode == 204) {
+  //  Browser.msgBox("Not Initialized");
+  //  MailApp.sendEmail({
+  //    to: "siteswrapper-gae-gwt@" + configurationDocumentName + ".appspotmail.com",
+  //    subject: configurationDocumentName,
+  //    body: configurationDocumentId });
+  //  configurationDocument.addMenu(configurationDocument.getName(), initialMenu);
+  //} else if (responseCode == 202) {
+  //  Browser.msgBox("Initialized");
+  //  configurationDocument.addMenu(configurationDocument.getName(), menuEntries);
+  //}
+  configurationDocument.addMenu("SitesWrapper", menuEntries);
+}
+
+function initialize () {
+  var headers = {};
+  var payload = {};
+  var options = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:payload};
+  var url = "https://" + configurationDocumentName + ".appspot.com/isInitialized";
+  var responseCode = UrlFetchApp.fetch(url, options).getResponseCode();
+  if (responseCode == 204) {
+    MailApp.sendEmail({
+      to: "siteswrapper-gae-gwt@" + configurationDocumentName + ".appspotmail.com",
+      subject: configurationDocumentName,
+      body: configurationDocumentId });
+  } else if (responseCode == 202) {
+    Browser.msgBox("Already Initialized");
+  }
 }
 
 function displayConfigurationDocumentId () {
@@ -87,7 +123,7 @@ function updateConfiguration() {
   }
 }
 
-// updateSiteConfiguration updates the Site object in the data-store
+// Updates the Site object in the data-store
 function updateSiteConfiguration() {
   var configurationParameters = getColumnsData(siteConfigurationSheet, siteConfigurationSheet.getRange("B1:B" + siteConfigurationSheet.getLastRow()));
   var siteAttributes = "";
