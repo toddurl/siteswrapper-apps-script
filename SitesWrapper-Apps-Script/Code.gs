@@ -10,247 +10,89 @@
  * distributed under the License is distributed on an  "AS  IS"  BASIS,  WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either  express  or  implied.  See  the
  * License for the specific language governing permissions and limitations under
- * the License. */
+ * the License.
+ * 
+ * Author Todd Url <toddurl@yahoo.com>
+ * 
+ * Url of the Development server - var url = "http://50.39.195.224:8888"
+ */
 var DEBUG = new Boolean(false);
-//var siteUrl = "http://50.39.195.224:8888"
-var siteUrl = "https://towingenterpriseexecutive.appspot.com"
-var configurationDocument = SpreadsheetApp.getActiveSpreadsheet();
-var configurationDocumentId = configurationDocument.getId();
-var configurationDocumentUrl = configurationDocument.getUrl();
-var configurationDocumentName = configurationDocument.getName();
-var siteUpdateUri = "/" + configurationDocumentId + "/updateSite";
-var styleUpdateUri = "/" + configurationDocumentId + "/updateStyle";
-var landingUpdateUri = "/" + configurationDocumentId + "/updateLanding";
-var pageUpdateUri = "/" + configurationDocumentId + "/updatePage";
-var informationUpdateUri = "/" + configurationDocumentId + "/updateItem";
-var commitConfigurationUri = "/" + configurationDocumentId + "/commitChange";
-var rollbackConfigurationUri = "/" + configurationDocumentId + "/rollbackConfiguration";
-var siteConfigurationSheet = configurationDocument.getSheetByName("SiteConfiguration");
-var styleConfigurationSheet = configurationDocument.getSheetByName("StyleConfiguration");
-var landingConfigurationSheet = configurationDocument.getSheetByName("LandingConfiguration");
-var pageConfigurationSheet = configurationDocument.getSheetByName("PageConfiguration");
-var informationConfigurationSheet = configurationDocument.getSheetByName("InformationConfiguration");
-//var initialMenu = [ {name: "Initialize", functionName: "initialize"} ];
+var document = SpreadsheetApp.getActiveSpreadsheet();
+var documentId = document.getId();
+var documentUrl = document.getUrl();
+var documentName = document.getName();
+var url = "https://" + documentName + ".appspot.com";
+var initializationUri = "/isInitialized";
+var siteUpdateUri = "/" + documentId + "/updateSite";
+var styleUpdateUri = "/" + documentId + "/updateStyle";
+var landingUpdateUri = "/" + documentId + "/updateLanding";
+var pageUpdateUri = "/" + documentId + "/updatePage";
+var informationUpdateUri = "/" + documentId + "/updateItem";
+var commitConfigurationUri = "/" + documentId + "/commitChange";
+var rollbackConfigurationUri = "/" + documentId + "/rollbackConfiguration";
+var siteConfigurationSheet = document.getSheetByName("SiteConfiguration");
+var styleConfigurationSheet = document.getSheetByName("StyleConfiguration");
+var landingConfigurationSheet = document.getSheetByName("LandingConfiguration");
+var pageConfigurationSheet = document.getSheetByName("PageConfiguration");
+var informationConfigurationSheet = document.getSheetByName("InformationConfiguration");
 var menuEntries = [{name: "Initialize Configuration", functionName: "initialize"},
-                   {name: "Update " + configurationDocument.getName() + " configuration", functionName: "updateConfiguration"},
+                   {name: "Update " + document.getName() + " configuration", functionName: "updateConfiguration"},
                    {name: "Display DocumentId", functionName: "displayConfigurationDocumentId"} ];
 
+/*
+ * onOpen()
+ * 
+ * Adds a main menu to the Apps Script Configuration Client.
+ */
 function onOpen() {
-  configurationDocument.addMenu("SitesWrapper", menuEntries);
+  document.addMenu("SitesWrapper", menuEntries);
 }
 
+/*
+ * initialize()
+ * 
+ * Determines by HTTP response code if the datastore has been initialized with a DocumentId object and if not, sends
+ * an mail to the Server Service Wrapper containing the document id of the spreadsheet managed by this Apps Script.
+ * Once the DocumentId object exists, sheets in the spreadsheet are created and populated with a default configuration.
+ */
 function initialize () {
   var headers = {};
   var payload = {};
   var options = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:payload};
-  var url = "https://" + configurationDocumentName + ".appspot.com/isInitialized";
-  var responseCode = UrlFetchApp.fetch(url, options).getResponseCode();
+  var responseCode = UrlFetchApp.fetch(url + initializationUri, options).getResponseCode();
   if (responseCode == 204) {
     MailApp.sendEmail({
-      to: "siteswrapper-gae-gwt@" + configurationDocumentName + ".appspotmail.com",
-      subject: configurationDocumentName,
-      body: configurationDocumentId });
+      to: "siteswrapper-gae-gwt@" + documentName + ".appspotmail.com",
+      subject: documentName,
+      body: documentId });
     while (responseCode != 202) {
-      responseCode = UrlFetchApp.fetch(url, options).getResponseCode();
+      Utilities.sleep(500);
+      responseCode = UrlFetchApp.fetch(url + initializationUri, options).getResponseCode();
     }
-    var activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-    activeSpreadsheet.renameActiveSheet("SiteConfiguration");
-    var sheet = activeSpreadsheet.getActiveSheet();
-    sheet.appendRow(["Site Name", "My Site"]);
-    sheet.appendRow(["Google App Engine Application", "towingenterpriseexecutive"]);
-    sheet.appendRow(["Google App Engine Version", "1"]);
-    sheet.appendRow(["Look And Feel", "Ghost"]);
-    sheet.appendRow(["Theme", "Charcoal"]);
-    sheet.appendRow(["Google Web Fonts Url", "http://fonts.googleapis.com/css?family=Aldrich|Raleway:100|Open+Sans:300,400"]);
-    sheet.appendRow(["Favicon Url", "http://ghostgames.com/favicon.ico"]);
-    sheet.appendRow(["Apple Touch Icon Url", "http://ssl.gstatic.com/sites/p/fff931/system/app/images/apple-touch-icon.png"]);
-    sheet.appendRow(["Default Page", "About"]);
-    sheet.appendRow(["Information Item Display Style", "Bottom"]);
-    sheet.appendRow(["Revision History Enabled", "No"]);
-    sheet.appendRow(["Logo Image", "http://googledrive.com/host/0B1wQZ0ttBuUaZVpyNkdKYnRobnc/Logo.png"]);
-    sheet.appendRow(["Logo Html", "<h1><span style='font-family:Aldrich,arial,sans-serif;font-style:italic;font-weight:normal'><font color=#ffffff>The</font><font color=#00ff00>Green</font><font color=#ffffff>URL</font></span><sup><font color=#ffffff size=2>&reg;</font></sup></h1>"]);
-    sheet.appendRow(["Display Logo As", "Html"]);
-    sheet.appendRow(["Site Footer", "<p>My Site Footer</p>"]);
-    sheet.appendRow(["Gwt Rpc Error Message", "Network Error - Check your network connection"]);
-    sheet.setColumnWidth(1, 200);
-    sheet.setColumnWidth(2, 500);
-    activeSpreadsheet.insertSheet('StyleConfiguration', 1);
-    sheet = activeSpreadsheet.setActiveSheet(activeSpreadsheet.getSheets()[1]);
-    sheet.appendRow(["Look And Feel", "URL IS/IT", "Koninklijke", "Ghost"]);
-    sheet.appendRow(["Description", "Looks like URL IS/IT's home page urlisit.com", "Reminiscent of www.usa.lighting.philips.com", "Classy minimalist back and white theme with red highlites in the spirit of Ghosts in Gothenburg ghostgames.com"]);
-    sheet.appendRow(["Primary Color", "#101010", "#ffffff", "#000000"]);
-    sheet.appendRow(["Primary Accent Color", "#d6d6d6", "#228B22", "#ffffff"]);
-    sheet.appendRow(["Secondary Accent Color", "#aaaaaa", "#4169E1", "#ff0000"]);
-    sheet.appendRow(["Tertiary Accent Color", "#eeeeee", "#00ff00", "#a4a4a4"]);
-    sheet.appendRow(["Main Menu Font Family", "Open+Sans", "Raleway", "Open+Sans"]);
-    sheet.appendRow(["Main Menu Font Size", "14px", "14px", "13px"]);
-    sheet.appendRow(["Main Menu Selection Font Color", "#ffffff", "#228B22", "#ffffff"]);
-    sheet.appendRow(["Main Menu Hover Font Color", "#0000ff", "#0000ff", "#fffc00"]);
-    sheet.appendRow(["Main Menu Selected Font Color", "#fffc00", "#00ff00", "#ff0000"]);
-    sheet.setColumnWidth(1, 300);
-    sheet.setColumnWidth(2, 300);
-    sheet.setColumnWidth(3, 300);
-    sheet.setColumnWidth(4, 300);
-    activeSpreadsheet.insertSheet('LandingConfiguration', 2);
-    sheet = activeSpreadsheet.setActiveSheet(activeSpreadsheet.getSheets()[2]);
-    sheet.appendRow(["Name", "URLeCycle", "URLX-15", "VZ-8 SkyUTV", "SchwimmUTV"]);
-    sheet.appendRow(["Type", "Page", "Page", "Page", "Page"]);
-    sheet.appendRow(["Description", "Sporting a 1.21 gigawatt cobalt60 RTG powered DAYMAK front wheel, the URLiCycle is the ultimate in power-assist electric bicycles. In keeping with DAYMAK's clean simple aesthetic look, there are no break, gear, throttle or controller cables visible on the bike as it's completely 802.11n fly by wireless. Whether you live to ride, or ride to live, the URLeCycle is guaranteed to leave you breathless.", "With a Reaction Motors XLR-99 engine delivering 60,000 pounds of thrust and an Inconel-X heat-resistant fuselage, the URLX-15 is easly capable of attaining it's operational altitude of 60 miles or a top speed of 4,500 miles per hour.", "The Piasecki VZ-8 Sky UTV features two tandem, three-blade ducted rotors, with the crew of two seated between the two rotors. Power is handled by a Chevy 350 LT1 small block V8 piston engine, driving the rotors by a central gearbox.", "The Schwimmwagen amphibious UTV, which resembles a small highly manueverable 4-wheel drive sports car, is at home on water as it is in ruff terrain. It features a 4-stroke 4-cylinder horizontally-opposed air-cooled 1,131 cc German motor, 5 speed transaxle with ZF self-locking differentials on both the front and rear axles. When crossing water the three bade propeller is lowered from the rear deck engine cover and folded back up when not in use."]);
-    sheet.appendRow(["Video Url", "http://youtu.be/_Ld83b7PC6w", "http://youtu.be/Jdq_l-8PNPA", "http://youtu.be/4SERvwWALOM", "http://youtu.be/A3ArELSi_K4"]);
-    sheet.appendRow(["Image Url", "https://lh6.googleusercontent.com/-ZNl9jqIj5Hg/TepZHNGTWsI/AAAAAAAAAFU/XaTsnlcygLY/5.png", "http://lh6.googleusercontent.com/-CRkMobJTCsY/TekPSN6Ir3I/AAAAAAAAAEo/cJYgdcZyka8/3.png", "http://lh5.googleusercontent.com/-qj5ulShqEOo/TbgIHiby9PI/AAAAAAAAABc/JwNpT2j8AeA/1.png", "http://lh5.googleusercontent.com/-aTv3UQdMlgU/Te00HsQJMHI/AAAAAAAAAHE/lauRwOluexY/1.png"]);
-    sheet.appendRow(["Link Name", "CRV Sales", "CRV Sales USA", "CRV Sales LLC", "Ironman"]);
-    sheet.appendRow(["Link Url", "http://crvsalesusa.appspot.com/unavailableItem?item=8&image=3", "http://crvsalesusa.appspot.com/unavailableItem?item=10&image=2", "http://crvsalesusa.appspot.com/unavailableItem?item=9&image=5", "http://crvsalesusa.appspot.com/unavailableItem?item=11&image=1"]);
-    sheet.appendRow(["Specification One", "Price", "Price", "Price", "Price"]);
-    sheet.appendRow(["Value One", "$1,210,000.00", "Please call for availability and pricing", "$99,999.99", "Call"]);
-    sheet.appendRow(["Specification Two", "", "", "", ""]);
-    sheet.appendRow(["Value Two", "", "", "", ""]);
-    sheet.appendRow(["Specification Three", "", "", "", ""]);
-    sheet.appendRow(["Value Three", "", "", "", ""]);
-    sheet.appendRow(["Specification Four", "", "", "", ""]);
-    sheet.appendRow(["Value Four", "", "", "", ""]);
-    sheet.appendRow(["Specification Five", "", "", "", ""]);
-    sheet.appendRow(["Value Five", "", "", "", ""]);
-    sheet.appendRow(["Specification Six", "", "", "", ""]);
-    sheet.appendRow(["Value Six", "", "", "", ""]);
-    sheet.appendRow(["Specification Seven", "", "", "", ""]);
-    sheet.appendRow(["Value Seven", "", "", "", ""]);
-    sheet.appendRow(["Specification Eight", "", "", "", ""]);
-    sheet.appendRow(["Value Eight", "", "", "", ""]);
-    sheet.appendRow(["Specification Nine", "", "", "", ""]);
-    sheet.appendRow(["Value Nine", "", "", "", ""]);
-    sheet.appendRow(["Specification Ten", "", "", "", ""]);
-    sheet.appendRow(["Value Ten", "", "", "", ""]);
-    sheet.setColumnWidth(1, 175);
-    sheet.setColumnWidth(2, 250);
-    sheet.setColumnWidth(3, 250);
-    sheet.setColumnWidth(4, 250);
-    sheet.setColumnWidth(5, 250);
-    activeSpreadsheet.insertSheet('InformationConfiguration', 3);
-    sheet = activeSpreadsheet.setActiveSheet(activeSpreadsheet.getSheets()[3]);
-    sheet.appendRow(["Name", "URLeCycle", "URLX-15", "VZ-8 SkyUTV", "SchwimmUTV"]);
-    sheet.appendRow(["Type", "Page", "Page", "Page", "Page"]);
-    sheet.appendRow(["Description", "Sporting a 1.21 gigawatt cobalt60 RTG powered DAYMAK front wheel, the URLiCycle is the ultimate in power-assist electric bicycles. In keeping with DAYMAK's clean simple aesthetic look, there are no break, gear, throttle or controller cables visible on the bike as it's completely 802.11n fly by wireless. Whether you live to ride, or ride to live, the URLeCycle is guaranteed to leave you breathless.", "With a Reaction Motors XLR-99 engine delivering 60,000 pounds of thrust and an Inconel-X heat-resistant fuselage, the URLX-15 is easly capable of attaining it's operational altitude of 60 miles or a top speed of 4,500 miles per hour.", "The Piasecki VZ-8 Sky UTV features two tandem, three-blade ducted rotors, with the crew of two seated between the two rotors. Power is handled by a Chevy 350 LT1 small block V8 piston engine, driving the rotors by a central gearbox.", "The Schwimmwagen amphibious UTV, which resembles a small highly manueverable 4-wheel drive sports car, is at home on water as it is in ruff terrain. It features a 4-stroke 4-cylinder horizontally-opposed air-cooled 1,131 cc German motor, 5 speed transaxle with ZF self-locking differentials on both the front and rear axles. When crossing water the three bade propeller is lowered from the rear deck engine cover and folded back up when not in use."]);
-    sheet.appendRow(["Video Url", "http://youtu.be/_Ld83b7PC6w", "http://youtu.be/Jdq_l-8PNPA", "http://youtu.be/4SERvwWALOM", "http://youtu.be/A3ArELSi_K4"]);
-    sheet.appendRow(["Image Url", "https://lh6.googleusercontent.com/-ZNl9jqIj5Hg/TepZHNGTWsI/AAAAAAAAAFU/XaTsnlcygLY/5.png", "http://lh6.googleusercontent.com/-CRkMobJTCsY/TekPSN6Ir3I/AAAAAAAAAEo/cJYgdcZyka8/3.png", "http://lh5.googleusercontent.com/-qj5ulShqEOo/TbgIHiby9PI/AAAAAAAAABc/JwNpT2j8AeA/1.png", "http://lh5.googleusercontent.com/-aTv3UQdMlgU/Te00HsQJMHI/AAAAAAAAAHE/lauRwOluexY/1.png"]);
-    sheet.appendRow(["Link Name", "CRV Sales", "CRV Sales USA", "CRV Sales LLC", "Ironman"]);
-    sheet.appendRow(["Link Url", "http://crvsalesusa.appspot.com/unavailableItem?item=8&image=3", "http://crvsalesusa.appspot.com/unavailableItem?item=10&image=2", "http://crvsalesusa.appspot.com/unavailableItem?item=9&image=5", "http://crvsalesusa.appspot.com/unavailableItem?item=11&image=1"]);
-    sheet.appendRow(["Specification One", "Price", "Price", "Price", "Price"]);
-    sheet.appendRow(["Value One", "$1,210,000.00", "Please call for availability and pricing", "$99,999.99", "Call"]);
-    sheet.appendRow(["Specification Two", "", "", "", ""]);
-    sheet.appendRow(["Value Two", "", "", "", ""]);
-    sheet.appendRow(["Specification Three", "", "", "", ""]);
-    sheet.appendRow(["Value Three", "", "", "", ""]);
-    sheet.appendRow(["Specification Four", "", "", "", ""]);
-    sheet.appendRow(["Value Four", "", "", "", ""]);
-    sheet.appendRow(["Specification Five", "", "", "", ""]);
-    sheet.appendRow(["Value Five", "", "", "", ""]);
-    sheet.appendRow(["Specification Six", "", "", "", ""]);
-    sheet.appendRow(["Value Six", "", "", "", ""]);
-    sheet.appendRow(["Specification Seven", "", "", "", ""]);
-    sheet.appendRow(["Value Seven", "", "", "", ""]);
-    sheet.appendRow(["Specification Eight", "", "", "", ""]);
-    sheet.appendRow(["Value Eight", "", "", "", ""]);
-    sheet.appendRow(["Specification Nine", "", "", "", ""]);
-    sheet.appendRow(["Value Nine", "", "", "", ""]);
-    sheet.appendRow(["Specification Ten", "", "", "", ""]);
-    sheet.appendRow(["Value Ten", "", "", "", ""]);
-    sheet.setColumnWidth(1, 175);
-    sheet.setColumnWidth(2, 250);
-    sheet.setColumnWidth(3, 250);
-    sheet.setColumnWidth(4, 250);
-    sheet.setColumnWidth(5, 250);
-    activeSpreadsheet.insertSheet('About', 4);
-    sheet = activeSpreadsheet.setActiveSheet(activeSpreadsheet.getSheets()[4]);
-    sheet.appendRow(["Page Name", "About"]);
-    sheet.appendRow(["Show Page Title", "Yes"]);
-    sheet.appendRow(["Logo Image", "https://c824ff113391b7c600d1069f19350d6607b580e1.googledrive.com/host/0BzPelJUA_7zUT3ZfQVdNcmwzbDg/SitesWrapperLogoLarge300x39.png", "", "", ""]);
-    sheet.appendRow(["Logo Html", "<h1><span style='font-family:Aldrich,arial,sans-serif;font-style:italic;font-weight:normal'><font color=#ffffff>The</font><font color=#ff0000>Red</font><font color=#ffffff>URL</font></span><sup><font color=#ffffff size=2>&reg;</font></sup></h1>"]);
-    sheet.appendRow(["Display Logo As", "Image"]);
-    sheet.appendRow(["Language Translation Enabled", "No"]);
-    sheet.appendRow(["Translated Languages", "en", "es"]);
-    sheet.appendRow(["Custom Search Enabled", "Yes"]);
-    sheet.appendRow(["Custom Search Urls", "<form id=sites-searchbox-form action=/site/poultryledlighting/system/app/pages/search><input type=hidden id=sites-searchbox-scope name=scope value=search-site /><input type=text id=jot-ui-searchInput name=q size=20 value= aria-label=\"Search this site\" autocomplete=off /><div id=sites-searchbox-button-set class=goog-inline-block><div role=button id=sites-searchbox-search-button class=\"goog-inline-block jfk-button jfk-button-standard\" tabindex=0>Search</div></div></form>"]);
-    sheet.appendRow(["Main Menu Type", "Link"]);
-    sheet.appendRow(["Main Menu Direction", "Horizontal"]);
-    sheet.appendRow(["Main Menu Selection Html"]);
-    sheet.appendRow(["Main Menu Selected Html"]);
-    sheet.appendRow(["Background Image Urls", "/images/SitesWrapperAbout.jpg", "/images/GreaterWidthRatioScaleUp.png", "http://www.spektyr.com/PrintImages/Cerulean%20Cross%203%20Large.jpg"]);
-    sheet.appendRow(["Background Image Duration Seconds", "5", "5", "5"]);
-    sheet.appendRow(["Content Menu Item Name", "Solid State Lighting", "", "", ""]);
-    sheet.appendRow(["Content Menu Item Link", "http://sites.google.com/site/solidstatelamps/", "", "", ""]);
-    sheet.appendRow(["Content Menu Style Sheet", "", "", "", ""]);
-    sheet.appendRow(["Content Layout", "Left sidebar", "", "", ""]);
-    sheet.appendRow(["Content Header", "<span style=\"font-size:24px\">Introducing the UR<font color=\"#00ff00\">LeD</font>&trade; 100,000 hour solid state A19 lamp from <span style=\"font-family:Aldrich,arial,sans-serif;font-style:italic;font-weight:normal\"><font color=\"#ffffff\">The</font><font color=\"#00ff00\">Green</font><font color=\"#ffffff\">URL</font></span><sup><font color=\"#ffffff\" size=\"2\">&reg;</font></sup></span>", "", "", ""]);
-    sheet.appendRow(["Content Column One", "UR<font color=\"#00ff00\">LeD</font>&trade; 6 watt lamps are the first 60 watt incandescent or 12 watt compact fluorescent general purpose replacement bulb to offer a lifetime warranty. Relamping with a&nbsp;UR<font color=\"#00ff00\">LeD</font>&trade; solid state lamp can save as much as $10 a year in electricity and may even eliminate the need to buy a bulb again.  <div><br> </div> <div>With most lamps lifespan depends on many factors, but in the case of LED lighting, it's all about thermal management. Like all semiconductors, solid state light emitting diods are degraded or damaged as the result of operating at high temperatures, not operating for long periods of time or being switched on and off. That's why <font color=\"#00ff00\">U</font>niversally <font color=\"#00ff00\">R</font>ecyclable <font color=\"#00ff00\">L</font>ighting&trade; puts 2.2 onces of aluminum heat sink at the core of each lamp, in order to maintain a low junction temperature and thus ensure high performance, high efficiency and long life out of each of the 77 Epistar Superbright SMD 3528 LEDs.</div> <div><br> </div> <div>A UR<font color=\"#00ff00\">LeD</font>&trade; lamp produces as much light as a conventional 60 watt light bulb yet only uses 6 watts and doesn't contain harmfull mercury or produce ultraviolet radiation. Plus, if your lamp ever burns out or diminishes in luminosity by more than 25% we'll replace it free of charge. That means that at todays energy prices a UR<font color=\"#00ff00\">LeD</font>&trade; lamp will typically pay for itself within two years, and since it doesn't need to be replaced, the savings won't stop there.</div> <div><br> </div> <div>Switching from traditional light bulbs to solid state lighting may seem like a burdon at first, but it doesn't have to be. After all, a light bulb's closest relative is the vacum tube, and if history has anything to teach us it's that \"in general\" we're better off with solid state TV's, flat screen monitors and digital cameras than we were with vacum tubes. The same is true with solid state lighting. Burned out bulbs, dimly lit homes and remembering to turn off the lights can literally be a thing of the past. After all, at 6 watts a UR<font color=\"#00ff00\">LeD</font>&trade; lamp uses less electricity than a typical night light.</div> <div><br> </div> <div>We want to help you step into the future of lighting with Solid State Lamps by making it as inexpensive, easy and risk free as possible. That's why we've selected UR<font color=\"#00ff00\">LeD</font>&trade; lamps and are offering them to you in the following packages, each of which comes with our unprecedented warranty and free shipping as well as increased savings over the previous package.</div> <div> <hr> <br> </div> <table border=\"1\" style=\"width:100%;border-collapse:collapse\"> <tbody> <tr> <td style=\"width:33.33%;background-color:#606060;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">One UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; lamp only $20</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Start saving today</font></font></div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/1_Lamp.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/1_Lamp.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">One UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; 100,000 hour A19 solid state LED bulb with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_s-xclick&amp;hosted_button_id=EXMWD68889Z46\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#707070;text-align:center\"> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; lamps only $80</font> </font> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Save $20</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/5_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/5_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; 100,000 hour A19 solid state LED light bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#808080;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Ten UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; lamps only $140</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Save $60</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/10_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/10_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Ten UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; 100,000 hour A19 solid state LED light bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> </tr> <tr> <td style=\"width:33.33%;background-color:#909090;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Fifteen UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; lamps only $200</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Save $100</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/15_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/15_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Fifteen UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; 100,000 hour A19 solid state LED light bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#a0a0a0;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; lamps only $260</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Save $140</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/20_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/20_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty UR</font><font color=\"#00ff00\">LeD</font> <font color=\"#000000\">&trade; 100,000 hour A19 solid state LED bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#b0b0b0;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; lamps only $320</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Save $180</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/25_Lamps3.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/25_Lamps3.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; 100,000 hour A19 solid state LED bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> </tr> </tbody> </table>", "", "", ""]);
-    sheet.appendRow(["Content Column Two", "", "", "", ""]);
-    sheet.appendRow(["Content Column Three", "", "", "", ""]);
-    sheet.appendRow(["Content Left Sidebar", "<div style=\"display:block;text-align:left\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/technology/Logo6.png\" style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> </div> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-weight:bold\"><span style=\"font-size:medium\"><span style=\"font-family:arial,sans-serif\"><font><font color=\"#134f5c\"><br> </font></font></span></span></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-weight:bold\"><span style=\"font-size:medium\"><span style=\"font-family:arial,sans-serif\"><font><font color=\"#134f5c\">Store Hours</font></font></span></span></span></p> <hr> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\">Monday-Friday&nbsp;</font></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\"><span style=\"font-size:x-small\">9:00AM - 5:00PM</span></font></span> </p> <font face=\"arial, sans-serif\"> <hr> </font> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\">Saturday&nbsp;</font></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><span style=\"font-size:x-small\"><font color=\"#444444\">10:00AM - 4:00PM</font></span></span></p> <font face=\"arial, sans-serif\"> <hr> </font> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\">Sunday&nbsp;</font></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><span style=\"font-size:x-small\"><font color=\"#444444\">12:00PM - 6:00PM</font></span></span></p> <hr> <div style=\"display:block;text-align:left\"> <div style=\"display:block;text-align:left\"><img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/PayPal2.png\" style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"></div> </div> <div style=\"text-align:left\"><br> </div> ", "", "", ""]);
-    sheet.appendRow(["Content Right Sidebar", "", "", "", ""]);
-    sheet.appendRow(["Content Footer", "<span style=\"font-size:24px\">Introducing the UR<font color=\"#00ff00\">LeD</font>&trade; 100,000 hour solid state A19 lamp from <span style=\"font-family:Aldrich,arial,sans-serif;font-style:italic;font-weight:normal\"><font color=\"#ffffff\">The</font><font color=\"#00ff00\">Green</font><font color=\"#ffffff\">URL</font></span><sup><font color=\"#ffffff\" size=\"2\">&reg;</font></sup></span>", "", "", ""]);
-    sheet.appendRow(["Message Header Text", "<font color=#ffc000>The easiest way to create a beautiful enterprise class web application</font>", "Five URLeD™ lamp only $80 save $20", "", ""]);
-    sheet.appendRow(["Message Body Text", "Whether you need simple pages, striking galleries, a professional blog, or an online store, it's all possible with SitesWrapper. Everything is mobile-ready and search engine optimized. Best of all, it's free!", "", ""]);
-    sheet.appendRow(["Message Information Item", "URLeCycle", "none", "", ""]);
-    sheet.appendRow(["Message Html Color Code", "#cccccc", "#cccccc", "", ""]);
-    sheet.appendRow(["Message Width Percent Of Page", "0.15", "0.05", "", ""]);
-    sheet.appendRow(["Message Percent Of Page From Left", "0.05", "0.2", "", ""]);
-    sheet.appendRow(["Message Percent Of Page From Top", "0.25", "0.5", "", ""]);
-    sheet.appendRow(["Message Duration Seconds", "5", "0.05", "", ""]);
-    sheet.setColumnWidth(1, 225);
-    sheet.setColumnWidth(2, 200);
-    sheet.setColumnWidth(3, 200);
-    sheet.setColumnWidth(4, 200);
-    activeSpreadsheet.insertSheet('Themes', 5);
-    sheet = activeSpreadsheet.setActiveSheet(activeSpreadsheet.getSheets()[5]);
-    sheet.appendRow(["Page Name", "Themes"]);
-    sheet.appendRow(["Show Page Title", "Yes"]);
-    sheet.appendRow(["Logo Image", "https://c824ff113391b7c600d1069f19350d6607b580e1.googledrive.com/host/0BzPelJUA_7zUT3ZfQVdNcmwzbDg/SitesWrapperLogoLarge300x39.png", "", "", ""]);
-    sheet.appendRow(["Logo Html", "<h1><span style='font-family:Aldrich,arial,sans-serif;font-style:italic;font-weight:normal'><font color=#ffffff>The</font><font color=#ff0000>Red</font><font color=#ffffff>URL</font></span><sup><font color=#ffffff size=2>&reg;</font></sup></h1>"]);
-    sheet.appendRow(["Display Logo As", "Image"]);
-    sheet.appendRow(["Language Translation Enabled", "No"]);
-    sheet.appendRow(["Translated Languages", "en", "es"]);
-    sheet.appendRow(["Custom Search Enabled", "Yes"]);
-    sheet.appendRow(["Custom Search Urls", "<form id=sites-searchbox-form action=/site/poultryledlighting/system/app/pages/search><input type=hidden id=sites-searchbox-scope name=scope value=search-site /><input type=text id=jot-ui-searchInput name=q size=20 value= aria-label=\"Search this site\" autocomplete=off /><div id=sites-searchbox-button-set class=goog-inline-block><div role=button id=sites-searchbox-search-button class=\"goog-inline-block jfk-button jfk-button-standard\" tabindex=0>Search</div></div></form>"]);
-    sheet.appendRow(["Main Menu Type", "Link"]);
-    sheet.appendRow(["Main Menu Direction", "Horizontal"]);
-    sheet.appendRow(["Main Menu Selection Html"]);
-    sheet.appendRow(["Main Menu Selected Html"]);
-    sheet.appendRow(["Background Image Urls", "/images/SitesWrapperAbout.jpg", "/images/GreaterWidthRatioScaleUp.png", "http://www.spektyr.com/PrintImages/Cerulean%20Cross%203%20Large.jpg"]);
-    sheet.appendRow(["Background Image Duration Seconds", "5", "5", "5"]);
-    sheet.appendRow(["Content Menu Item Name", "Solid State Lighting", "", "", ""]);
-    sheet.appendRow(["Content Menu Item Link", "http://sites.google.com/site/solidstatelamps/", "", "", ""]);
-    sheet.appendRow(["Content Menu Style Sheet", "", "", "", ""]);
-    sheet.appendRow(["Content Layout", "Left sidebar", "", "", ""]);
-    sheet.appendRow(["Content Header", "<span style=\"font-size:24px\">Introducing the UR<font color=\"#00ff00\">LeD</font>&trade; 100,000 hour solid state A19 lamp from <span style=\"font-family:Aldrich,arial,sans-serif;font-style:italic;font-weight:normal\"><font color=\"#ffffff\">The</font><font color=\"#00ff00\">Green</font><font color=\"#ffffff\">URL</font></span><sup><font color=\"#ffffff\" size=\"2\">&reg;</font></sup></span>", "", "", ""]);
-    sheet.appendRow(["Content Column One", "UR<font color=\"#00ff00\">LeD</font>&trade; 6 watt lamps are the first 60 watt incandescent or 12 watt compact fluorescent general purpose replacement bulb to offer a lifetime warranty. Relamping with a&nbsp;UR<font color=\"#00ff00\">LeD</font>&trade; solid state lamp can save as much as $10 a year in electricity and may even eliminate the need to buy a bulb again.  <div><br> </div> <div>With most lamps lifespan depends on many factors, but in the case of LED lighting, it's all about thermal management. Like all semiconductors, solid state light emitting diods are degraded or damaged as the result of operating at high temperatures, not operating for long periods of time or being switched on and off. That's why <font color=\"#00ff00\">U</font>niversally <font color=\"#00ff00\">R</font>ecyclable <font color=\"#00ff00\">L</font>ighting&trade; puts 2.2 onces of aluminum heat sink at the core of each lamp, in order to maintain a low junction temperature and thus ensure high performance, high efficiency and long life out of each of the 77 Epistar Superbright SMD 3528 LEDs.</div> <div><br> </div> <div>A UR<font color=\"#00ff00\">LeD</font>&trade; lamp produces as much light as a conventional 60 watt light bulb yet only uses 6 watts and doesn't contain harmfull mercury or produce ultraviolet radiation. Plus, if your lamp ever burns out or diminishes in luminosity by more than 25% we'll replace it free of charge. That means that at todays energy prices a UR<font color=\"#00ff00\">LeD</font>&trade; lamp will typically pay for itself within two years, and since it doesn't need to be replaced, the savings won't stop there.</div> <div><br> </div> <div>Switching from traditional light bulbs to solid state lighting may seem like a burdon at first, but it doesn't have to be. After all, a light bulb's closest relative is the vacum tube, and if history has anything to teach us it's that \"in general\" we're better off with solid state TV's, flat screen monitors and digital cameras than we were with vacum tubes. The same is true with solid state lighting. Burned out bulbs, dimly lit homes and remembering to turn off the lights can literally be a thing of the past. After all, at 6 watts a UR<font color=\"#00ff00\">LeD</font>&trade; lamp uses less electricity than a typical night light.</div> <div><br> </div> <div>We want to help you step into the future of lighting with Solid State Lamps by making it as inexpensive, easy and risk free as possible. That's why we've selected UR<font color=\"#00ff00\">LeD</font>&trade; lamps and are offering them to you in the following packages, each of which comes with our unprecedented warranty and free shipping as well as increased savings over the previous package.</div> <div> <hr> <br> </div> <table border=\"1\" style=\"width:100%;border-collapse:collapse\"> <tbody> <tr> <td style=\"width:33.33%;background-color:#606060;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">One UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; lamp only $20</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Start saving today</font></font></div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/1_Lamp.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/1_Lamp.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">One UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; 100,000 hour A19 solid state LED bulb with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_s-xclick&amp;hosted_button_id=EXMWD68889Z46\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#707070;text-align:center\"> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; lamps only $80</font> </font> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Save $20</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/5_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/5_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; 100,000 hour A19 solid state LED light bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#808080;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Ten UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; lamps only $140</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Save $60</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/10_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/10_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Ten UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; 100,000 hour A19 solid state LED light bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> </tr> <tr> <td style=\"width:33.33%;background-color:#909090;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Fifteen UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; lamps only $200</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Save $100</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/15_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/15_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Fifteen UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; 100,000 hour A19 solid state LED light bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#a0a0a0;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; lamps only $260</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Save $140</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/20_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/20_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty UR</font><font color=\"#00ff00\">LeD</font> <font color=\"#000000\">&trade; 100,000 hour A19 solid state LED bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#b0b0b0;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; lamps only $320</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Save $180</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/25_Lamps3.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/25_Lamps3.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; 100,000 hour A19 solid state LED bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> </tr> </tbody> </table>", "", "", ""]);
-    sheet.appendRow(["Content Column Two", "", "", "", ""]);
-    sheet.appendRow(["Content Column Three", "", "", "", ""]);
-    sheet.appendRow(["Content Left Sidebar", "<div style=\"display:block;text-align:left\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/technology/Logo6.png\" style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> </div> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-weight:bold\"><span style=\"font-size:medium\"><span style=\"font-family:arial,sans-serif\"><font><font color=\"#134f5c\"><br> </font></font></span></span></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-weight:bold\"><span style=\"font-size:medium\"><span style=\"font-family:arial,sans-serif\"><font><font color=\"#134f5c\">Store Hours</font></font></span></span></span></p> <hr> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\">Monday-Friday&nbsp;</font></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\"><span style=\"font-size:x-small\">9:00AM - 5:00PM</span></font></span> </p> <font face=\"arial, sans-serif\"> <hr> </font> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\">Saturday&nbsp;</font></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><span style=\"font-size:x-small\"><font color=\"#444444\">10:00AM - 4:00PM</font></span></span></p> <font face=\"arial, sans-serif\"> <hr> </font> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\">Sunday&nbsp;</font></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><span style=\"font-size:x-small\"><font color=\"#444444\">12:00PM - 6:00PM</font></span></span></p> <hr> <div style=\"display:block;text-align:left\"> <div style=\"display:block;text-align:left\"><img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/PayPal2.png\" style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"></div> </div> <div style=\"text-align:left\"><br> </div> ", "", "", ""]);
-    sheet.appendRow(["Content Right Sidebar", "", "", "", ""]);
-    sheet.appendRow(["Content Footer", "<span style=\"font-size:24px\">Introducing the UR<font color=\"#00ff00\">LeD</font>&trade; 100,000 hour solid state A19 lamp from <span style=\"font-family:Aldrich,arial,sans-serif;font-style:italic;font-weight:normal\"><font color=\"#ffffff\">The</font><font color=\"#00ff00\">Green</font><font color=\"#ffffff\">URL</font></span><sup><font color=\"#ffffff\" size=\"2\">&reg;</font></sup></span>", "", "", ""]);
-    sheet.appendRow(["Message Header Text", "<font color=#ffc000>SitesWrapper makes it simple to create a beautiful, professional web presence</font>", "Five URLeD™ lamp only $80 save $20", "", ""]);
-    sheet.appendRow(["Message Body Text", "Promote your business, showcase your art, set up an online shop or just sharpen your Java programming skills. SitesWrapper is a website builder that has everything you need to build enterprise class web presence free. Browse our collection of beautiful website templates. You'll find loads of stunning designs, ready to be customized.", "", ""]);
-    sheet.appendRow(["Message Information Item", "URLeCycle", "none", "", ""]);
-    sheet.appendRow(["Message Html Color Code", "#cccccc", "#cccccc", "", ""]);
-    sheet.appendRow(["Message Width Percent Of Page", "0.15", "0.05", "", ""]);
-    sheet.appendRow(["Message Percent Of Page From Left", "0.66", "0.2", "", ""]);
-    sheet.appendRow(["Message Percent Of Page From Top", "0.33", "0.5", "", ""]);
-    sheet.appendRow(["Message Duration Seconds", "5", "0.05", "", ""]);
-    sheet.setColumnWidth(1, 200);
-    sheet.setColumnWidth(2, 200);
-    sheet.setColumnWidth(3, 200);
-    sheet.setColumnWidth(4, 200);
+    initializeSite();
+    initializeStyles();
+    initializeLandings();
+    initializeItems();
+    initializeFirstPage();
+    initializeSecondPage();
   } else if (responseCode == 202) {
     Browser.msgBox("Already Initialized");
   }
 }
 
+/*
+ * Displays the Google Docs document id to the user. This id is unique and used as a key to enable the
+ * configuration clients to update the datastore.
+ */
 function displayConfigurationDocumentId () {
-  Browser.msgBox("The GoogleDocsConfigurationDocumentId for this webapp is " + configurationDocumentId +
-                 "The GoogleDocsConfigurationDocumentUrl for this webapp is " + configurationDocumentUrl);
+  Browser.msgBox("The GoogleDocsConfigurationDocumentId for this webapp is " + documentId +
+                 "The GoogleDocsConfigurationDocumentUrl for this webapp is " + documentUrl);
 }
 
-// updateConfiguration is a convenience method which sand-boxes the external calls to UrlFetchApp in
-// a try-catch block and commits the new configuration to the data-store.
+/*
+ * Convenience method which sandboxes the external calls to UrlFetchApp in a try-catch block and
+ * commits the new configuration to the datastore.
+ */
 function updateConfiguration() {
   try {
     updateSiteConfiguration();
@@ -294,7 +136,9 @@ function updateConfiguration() {
   }
 }
 
-// Updates the Site object in the data-store
+/*
+ * Updates the Site object in the datastore.
+ */
 function updateSiteConfiguration() {
   var configurationParameters = getColumnsData(siteConfigurationSheet, siteConfigurationSheet.getRange("B1:B" + siteConfigurationSheet.getLastRow()));
   var siteAttributes = "";
@@ -358,19 +202,20 @@ function updateSiteConfiguration() {
     siteAttributes += "&gwtRpcErrorMessage=" + escape(configurationParameters[0].gwtRpcErrorMessage);
   }
   var headers = {};
-  //headers.t3luxoqcqdwoyagIU4DXvMA = configurationDocumentId;
-  headers.daoId = configurationDocumentId;
+  headers.daoId = documentId;
   var advancedArguments = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:siteAttributes};
   if (DEBUG == true) {
     Browser.msgBox("SiteConfiguration Attributes = " + siteAttributes);
   } else {
-    if (UrlFetchApp.fetch(siteUrl + siteUpdateUri, advancedArguments).getContentText() != configurationDocumentId) {
+    if (UrlFetchApp.fetch(url + siteUpdateUri, advancedArguments).getContentText() != documentId) {
       throw "CREATION OF NEW SiteConfiguration OBJECT IN DATASTORE FAILED";
     }
   }
 }
 
-// updatesStyleConfiguration updates the Style object in the data-store
+/*
+ * Creates a new collection of Style objects in the datastore.
+ */
 function updateStyleConfiguration() {
   var maxColumns = styleConfigurationSheet.getLastColumn() + 1;
   var lookAndFeelTypes = getColumnsData(styleConfigurationSheet,
@@ -438,16 +283,18 @@ function updateStyleConfiguration() {
       Browser.msgBox("InformationConfiguration Attributes = " + lookAndFeelTypeParameters);
     } else {
       var headers = {};
-      headers.daoId = configurationDocumentId;
+      headers.daoId = documentId;
       var advancedArguments = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:lookAndFeelTypeParameters};
-      if (UrlFetchApp.fetch(siteUrl + styleUpdateUri, advancedArguments).getContentText() != configurationDocumentId) {
+      if (UrlFetchApp.fetch(url + styleUpdateUri, advancedArguments).getContentText() != documentId) {
         throw "CREATION OF NEW StyleConfiguration OBJECT IN APP ENGINE DATASTORE FAILED";
       } 
     }
   }
 }
 
-// updateLandingConfiguration creates a new collection of Landing objects in the data-store
+/*
+ * Creates a new collection of Landing objects in the datastore.
+ */
 function updateLandingConfiguration() {
   var maxColumns = landingConfigurationSheet.getLastColumn() + 1;
   var landings = getColumnsData(landingConfigurationSheet,
@@ -515,16 +362,18 @@ function updateLandingConfiguration() {
       Browser.msgBox("LandingConfiguration Attributes = " + landingParameters);
     } else {
       var headers = {};
-      headers.daoId = configurationDocumentId;
+      headers.daoId = documentId;
       var advancedArguments = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:landingParameters};
-      if (UrlFetchApp.fetch(siteUrl + landingUpdateUri, advancedArguments).getContentText() != configurationDocumentId) {
+      if (UrlFetchApp.fetch(url + landingUpdateUri, advancedArguments).getContentText() != documentId) {
         throw "CREATION OF NEW LandingConfiguration OBJECT IN APP ENGINE DATASTORE FOR PAGE FAILED";
       } 
     }
   }
 }
 
-// updatePageConfiguration creates a new collection of Page objects in the data-store
+/*
+ * Creates a new collection of Page objects in the datastore.
+ */
 function updatePageConfiguration() {
   var sheets = SpreadsheetApp.getActiveSpreadsheet().getSheets();
   var pageSheets = new Array();
@@ -762,16 +611,18 @@ function updatePageConfiguration() {
       Browser.msgBox("PageConfiguration Attributes Page=" + pageSheets[sheet].getName() + " and " + pageAttributes);
     } else {
       var headers = {};
-      headers.daoId = configurationDocumentId;
+      headers.daoId = documentId;
       var advancedArguments = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:pageAttributes};
-      if (UrlFetchApp.fetch(siteUrl + pageUpdateUri, advancedArguments).getContentText() != configurationDocumentId) {
+      if (UrlFetchApp.fetch(url + pageUpdateUri, advancedArguments).getContentText() != documentId) {
         throw "CREATION OF NEW PageConfiguration OBJECT IN APP ENGINE DATASTORE FOR PAGE " + pageSheets[sheet].getName() + " FAILED";
       }
     }
   }
 }
 
-// updateInformationConfiguration creates a new collection of Items in the data-store
+/*
+ * Creates a new collection of Items in the datastore.
+ */
 function updateInformationConfiguration() {
   var maxColumns = informationConfigurationSheet.getLastColumn() + 1;
   var informationItems = getColumnsData(informationConfigurationSheet,
@@ -839,30 +690,271 @@ function updateInformationConfiguration() {
       Browser.msgBox("InformationConfiguration Attributes = " + informationItemParameters);
     } else {
       var headers = {};
-      headers.daoId = configurationDocumentId;
+      headers.daoId = documentId;
       var advancedArguments = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:informationItemParameters};
-      if (UrlFetchApp.fetch(siteUrl + informationUpdateUri, advancedArguments).getContentText() != configurationDocumentId) {
+      if (UrlFetchApp.fetch(url + informationUpdateUri, advancedArguments).getContentText() != documentId) {
         throw "CREATION OF NEW InformationConfiguration OBJECT IN APP ENGINE DATASTORE FOR PAGE FAILED";
       } 
     }
   }
 }
 
-// commitConfigurationChanged persists the newly created object to the data-store and alerts the user
+/*
+ * Persists the newly created object to the datastore and alerts the user of completion.
+ */
 function commitConfigurationChanges() {
   var siteAttributes = "";
   var headers = {};
-  headers.gDocsId = configurationDocumentId;
+  headers.gDocsId = documentId;
   var advancedArguments = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:siteAttributes};
   if (DEBUG != true) {
-    if (UrlFetchApp.fetch(siteUrl + commitConfigurationUri, advancedArguments).getContentText() != configurationDocumentId) {
+    if (UrlFetchApp.fetch(url + commitConfigurationUri, advancedArguments).getContentText() != documentId) {
       throw "COMMIT OF NEW CONFIGURATION IN APP ENGINE DATASTORE FOR PAGE FAILED";
     } else {
-      Browser.msgBox("Update of " + configurationDocument.getName() + " configuration successfull");
+      Browser.msgBox("Update of " + document.getName() + " configuration successfull");
     }
   }
 }
+
+/*
+ * initializeSite
+ * 
+ * Renames the initial sheet contained in a new spreadsheet to SiteConfiguration and populates
+ * it with a default configuration.
+ */
+function initializeSite() {
+  //var activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  document.renameActiveSheet("SiteConfiguration");
+  var sheet = document.getActiveSheet();
+  sheet.appendRow(["Site Name", "My Site"]);
+  sheet.appendRow(["Google App Engine Application", "towingenterpriseexecutive"]);
+  sheet.appendRow(["Google App Engine Version", "1"]);
+  sheet.appendRow(["Look And Feel", "Ghost"]);
+  sheet.appendRow(["Theme", "Charcoal"]);
+  sheet.appendRow(["Google Web Fonts Url", "http://fonts.googleapis.com/css?family=Aldrich|Raleway:100|Open+Sans:300,400"]);
+  sheet.appendRow(["Favicon Url", "http://ghostgames.com/favicon.ico"]);
+  sheet.appendRow(["Apple Touch Icon Url", "http://ssl.gstatic.com/sites/p/fff931/system/app/images/apple-touch-icon.png"]);
+  sheet.appendRow(["Default Page", "About"]);
+  sheet.appendRow(["Information Item Display Style", "Bottom"]);
+  sheet.appendRow(["Revision History Enabled", "No"]);
+  sheet.appendRow(["Logo Image", "http://googledrive.com/host/0B1wQZ0ttBuUaZVpyNkdKYnRobnc/Logo.png"]);
+  sheet.appendRow(["Logo Html", "<h1><span style='font-family:Aldrich,arial,sans-serif;font-style:italic;font-weight:normal'><font color=#ffffff>The</font><font color=#00ff00>Green</font><font color=#ffffff>URL</font></span><sup><font color=#ffffff size=2>&reg;</font></sup></h1>"]);
+  sheet.appendRow(["Display Logo As", "Html"]);
+  sheet.appendRow(["Site Footer", "<p>My Site Footer</p>"]);
+  sheet.appendRow(["Gwt Rpc Error Message", "Network Error - Check your network connection"]);
+  sheet.setColumnWidth(1, 200);
+  sheet.setColumnWidth(2, 500);
+}
+
+/*
+ * initializeStyles
+ * 
+ * Creates a new sheet named StyleConfiguration and populates it with a default configuration.
+ */
+function initializeStyles() {
+  document.insertSheet('StyleConfiguration', 1);
+  sheet = document.setActiveSheet(document.getSheets()[1]);
+  sheet.appendRow(["Look And Feel", "URL IS/IT", "Koninklijke", "Ghost"]);
+  sheet.appendRow(["Description", "Looks like URL IS/IT's home page urlisit.com", "Reminiscent of www.usa.lighting.philips.com", "Classy minimalist back and white theme with red highlites in the spirit of Ghosts in Gothenburg ghostgames.com"]);
+  sheet.appendRow(["Primary Color", "#101010", "#ffffff", "#000000"]);
+  sheet.appendRow(["Primary Accent Color", "#d6d6d6", "#228B22", "#ffffff"]);
+  sheet.appendRow(["Secondary Accent Color", "#aaaaaa", "#4169E1", "#ff0000"]);
+  sheet.appendRow(["Tertiary Accent Color", "#eeeeee", "#00ff00", "#a4a4a4"]);
+  sheet.appendRow(["Main Menu Font Family", "Open+Sans", "Raleway", "Open+Sans"]);
+  sheet.appendRow(["Main Menu Font Size", "14px", "14px", "13px"]);
+  sheet.appendRow(["Main Menu Selection Font Color", "#ffffff", "#228B22", "#ffffff"]);
+  sheet.appendRow(["Main Menu Hover Font Color", "#0000ff", "#0000ff", "#fffc00"]);
+  sheet.appendRow(["Main Menu Selected Font Color", "#fffc00", "#00ff00", "#ff0000"]);
+  sheet.setColumnWidth(1, 300);
+  sheet.setColumnWidth(2, 300);
+  sheet.setColumnWidth(3, 300);
+  sheet.setColumnWidth(4, 300);
+}
   
+/*
+ * initializeLandings
+ * 
+ * Creates a new sheet named LandingConfiguration and populates it with a default configuration.
+ */
+function initializeLandings() {
+  document.insertSheet('LandingConfiguration', 2);
+  sheet = document.setActiveSheet(document.getSheets()[2]);
+  sheet.appendRow(["Name", "URLeCycle", "URLX-15", "VZ-8 SkyUTV", "SchwimmUTV"]);
+  sheet.appendRow(["Type", "Page", "Page", "Page", "Page"]);
+  sheet.appendRow(["Description", "Sporting a 1.21 gigawatt cobalt60 RTG powered DAYMAK front wheel, the URLiCycle is the ultimate in power-assist electric bicycles. In keeping with DAYMAK's clean simple aesthetic look, there are no break, gear, throttle or controller cables visible on the bike as it's completely 802.11n fly by wireless. Whether you live to ride, or ride to live, the URLeCycle is guaranteed to leave you breathless.", "With a Reaction Motors XLR-99 engine delivering 60,000 pounds of thrust and an Inconel-X heat-resistant fuselage, the URLX-15 is easly capable of attaining it's operational altitude of 60 miles or a top speed of 4,500 miles per hour.", "The Piasecki VZ-8 Sky UTV features two tandem, three-blade ducted rotors, with the crew of two seated between the two rotors. Power is handled by a Chevy 350 LT1 small block V8 piston engine, driving the rotors by a central gearbox.", "The Schwimmwagen amphibious UTV, which resembles a small highly manueverable 4-wheel drive sports car, is at home on water as it is in ruff terrain. It features a 4-stroke 4-cylinder horizontally-opposed air-cooled 1,131 cc German motor, 5 speed transaxle with ZF self-locking differentials on both the front and rear axles. When crossing water the three bade propeller is lowered from the rear deck engine cover and folded back up when not in use."]);
+  sheet.appendRow(["Video Url", "http://youtu.be/_Ld83b7PC6w", "http://youtu.be/Jdq_l-8PNPA", "http://youtu.be/4SERvwWALOM", "http://youtu.be/A3ArELSi_K4"]);
+  sheet.appendRow(["Image Url", "https://lh6.googleusercontent.com/-ZNl9jqIj5Hg/TepZHNGTWsI/AAAAAAAAAFU/XaTsnlcygLY/5.png", "http://lh6.googleusercontent.com/-CRkMobJTCsY/TekPSN6Ir3I/AAAAAAAAAEo/cJYgdcZyka8/3.png", "http://lh5.googleusercontent.com/-qj5ulShqEOo/TbgIHiby9PI/AAAAAAAAABc/JwNpT2j8AeA/1.png", "http://lh5.googleusercontent.com/-aTv3UQdMlgU/Te00HsQJMHI/AAAAAAAAAHE/lauRwOluexY/1.png"]);
+  sheet.appendRow(["Link Name", "CRV Sales", "CRV Sales USA", "CRV Sales LLC", "Ironman"]);
+  sheet.appendRow(["Link Url", "http://crvsalesusa.appspot.com/unavailableItem?item=8&image=3", "http://crvsalesusa.appspot.com/unavailableItem?item=10&image=2", "http://crvsalesusa.appspot.com/unavailableItem?item=9&image=5", "http://crvsalesusa.appspot.com/unavailableItem?item=11&image=1"]);
+  sheet.appendRow(["Specification One", "Price", "Price", "Price", "Price"]);
+  sheet.appendRow(["Value One", "$1,210,000.00", "Please call for availability and pricing", "$99,999.99", "Call"]);
+  sheet.appendRow(["Specification Two", "", "", "", ""]);
+  sheet.appendRow(["Value Two", "", "", "", ""]);
+  sheet.appendRow(["Specification Three", "", "", "", ""]);
+  sheet.appendRow(["Value Three", "", "", "", ""]);
+  sheet.appendRow(["Specification Four", "", "", "", ""]);
+  sheet.appendRow(["Value Four", "", "", "", ""]);
+  sheet.appendRow(["Specification Five", "", "", "", ""]);
+  sheet.appendRow(["Value Five", "", "", "", ""]);
+  sheet.appendRow(["Specification Six", "", "", "", ""]);
+  sheet.appendRow(["Value Six", "", "", "", ""]);
+  sheet.appendRow(["Specification Seven", "", "", "", ""]);
+  sheet.appendRow(["Value Seven", "", "", "", ""]);
+  sheet.appendRow(["Specification Eight", "", "", "", ""]);
+  sheet.appendRow(["Value Eight", "", "", "", ""]);
+  sheet.appendRow(["Specification Nine", "", "", "", ""]);
+  sheet.appendRow(["Value Nine", "", "", "", ""]);
+  sheet.appendRow(["Specification Ten", "", "", "", ""]);
+  sheet.appendRow(["Value Ten", "", "", "", ""]);
+  sheet.setColumnWidth(1, 175);
+  sheet.setColumnWidth(2, 250);
+  sheet.setColumnWidth(3, 250);
+  sheet.setColumnWidth(4, 250);
+  sheet.setColumnWidth(5, 250);
+}
+  
+/*
+ * initializeItems
+ * 
+ * Creates a new sheet named LandingConfiguration and populates it with a default configuration.
+ */
+function initializeItems() {
+  document.insertSheet('InformationConfiguration', 3);
+  sheet = document.setActiveSheet(document.getSheets()[3]);
+  sheet.appendRow(["Name", "URLeCycle", "URLX-15", "VZ-8 SkyUTV", "SchwimmUTV"]);
+  sheet.appendRow(["Type", "Page", "Page", "Page", "Page"]);
+  sheet.appendRow(["Description", "Sporting a 1.21 gigawatt cobalt60 RTG powered DAYMAK front wheel, the URLiCycle is the ultimate in power-assist electric bicycles. In keeping with DAYMAK's clean simple aesthetic look, there are no break, gear, throttle or controller cables visible on the bike as it's completely 802.11n fly by wireless. Whether you live to ride, or ride to live, the URLeCycle is guaranteed to leave you breathless.", "With a Reaction Motors XLR-99 engine delivering 60,000 pounds of thrust and an Inconel-X heat-resistant fuselage, the URLX-15 is easly capable of attaining it's operational altitude of 60 miles or a top speed of 4,500 miles per hour.", "The Piasecki VZ-8 Sky UTV features two tandem, three-blade ducted rotors, with the crew of two seated between the two rotors. Power is handled by a Chevy 350 LT1 small block V8 piston engine, driving the rotors by a central gearbox.", "The Schwimmwagen amphibious UTV, which resembles a small highly manueverable 4-wheel drive sports car, is at home on water as it is in ruff terrain. It features a 4-stroke 4-cylinder horizontally-opposed air-cooled 1,131 cc German motor, 5 speed transaxle with ZF self-locking differentials on both the front and rear axles. When crossing water the three bade propeller is lowered from the rear deck engine cover and folded back up when not in use."]);
+  sheet.appendRow(["Video Url", "http://youtu.be/_Ld83b7PC6w", "http://youtu.be/Jdq_l-8PNPA", "http://youtu.be/4SERvwWALOM", "http://youtu.be/A3ArELSi_K4"]);
+  sheet.appendRow(["Image Url", "https://lh6.googleusercontent.com/-ZNl9jqIj5Hg/TepZHNGTWsI/AAAAAAAAAFU/XaTsnlcygLY/5.png", "http://lh6.googleusercontent.com/-CRkMobJTCsY/TekPSN6Ir3I/AAAAAAAAAEo/cJYgdcZyka8/3.png", "http://lh5.googleusercontent.com/-qj5ulShqEOo/TbgIHiby9PI/AAAAAAAAABc/JwNpT2j8AeA/1.png", "http://lh5.googleusercontent.com/-aTv3UQdMlgU/Te00HsQJMHI/AAAAAAAAAHE/lauRwOluexY/1.png"]);
+  sheet.appendRow(["Link Name", "CRV Sales", "CRV Sales USA", "CRV Sales LLC", "Ironman"]);
+  sheet.appendRow(["Link Url", "http://crvsalesusa.appspot.com/unavailableItem?item=8&image=3", "http://crvsalesusa.appspot.com/unavailableItem?item=10&image=2", "http://crvsalesusa.appspot.com/unavailableItem?item=9&image=5", "http://crvsalesusa.appspot.com/unavailableItem?item=11&image=1"]);
+  sheet.appendRow(["Specification One", "Price", "Price", "Price", "Price"]);
+  sheet.appendRow(["Value One", "$1,210,000.00", "Please call for availability and pricing", "$99,999.99", "Call"]);
+  sheet.appendRow(["Specification Two", "", "", "", ""]);
+  sheet.appendRow(["Value Two", "", "", "", ""]);
+  sheet.appendRow(["Specification Three", "", "", "", ""]);
+  sheet.appendRow(["Value Three", "", "", "", ""]);
+  sheet.appendRow(["Specification Four", "", "", "", ""]);
+  sheet.appendRow(["Value Four", "", "", "", ""]);
+  sheet.appendRow(["Specification Five", "", "", "", ""]);
+  sheet.appendRow(["Value Five", "", "", "", ""]);
+  sheet.appendRow(["Specification Six", "", "", "", ""]);
+  sheet.appendRow(["Value Six", "", "", "", ""]);
+  sheet.appendRow(["Specification Seven", "", "", "", ""]);
+  sheet.appendRow(["Value Seven", "", "", "", ""]);
+  sheet.appendRow(["Specification Eight", "", "", "", ""]);
+  sheet.appendRow(["Value Eight", "", "", "", ""]);
+  sheet.appendRow(["Specification Nine", "", "", "", ""]);
+  sheet.appendRow(["Value Nine", "", "", "", ""]);
+  sheet.appendRow(["Specification Ten", "", "", "", ""]);
+  sheet.appendRow(["Value Ten", "", "", "", ""]);
+  sheet.setColumnWidth(1, 175);
+  sheet.setColumnWidth(2, 250);
+  sheet.setColumnWidth(3, 250);
+  sheet.setColumnWidth(4, 250);
+  sheet.setColumnWidth(5, 250);
+}
+
+/*
+ * initializeFirstPage
+ * 
+ * Creates a new sheet with an arbitrary name (the name of a page in the site) and populates it
+ * with a default configuration.
+ */
+function initializeFirstPage() {
+  document.insertSheet('About', 4);
+  sheet = document.setActiveSheet(document.getSheets()[4]);
+  sheet.appendRow(["Page Name", "About"]);
+  sheet.appendRow(["Show Page Title", "Yes"]);
+  sheet.appendRow(["Logo Image", "https://c824ff113391b7c600d1069f19350d6607b580e1.googledrive.com/host/0BzPelJUA_7zUT3ZfQVdNcmwzbDg/SitesWrapperLogoLarge300x39.png", "", "", ""]);
+  sheet.appendRow(["Logo Html", "<h1><span style='font-family:Aldrich,arial,sans-serif;font-style:italic;font-weight:normal'><font color=#ffffff>The</font><font color=#ff0000>Red</font><font color=#ffffff>URL</font></span><sup><font color=#ffffff size=2>&reg;</font></sup></h1>"]);
+  sheet.appendRow(["Display Logo As", "Image"]);
+  sheet.appendRow(["Language Translation Enabled", "No"]);
+  sheet.appendRow(["Translated Languages", "en", "es"]);
+  sheet.appendRow(["Custom Search Enabled", "Yes"]);
+  sheet.appendRow(["Custom Search Urls", "<form id=sites-searchbox-form action=/site/poultryledlighting/system/app/pages/search><input type=hidden id=sites-searchbox-scope name=scope value=search-site /><input type=text id=jot-ui-searchInput name=q size=20 value= aria-label=\"Search this site\" autocomplete=off /><div id=sites-searchbox-button-set class=goog-inline-block><div role=button id=sites-searchbox-search-button class=\"goog-inline-block jfk-button jfk-button-standard\" tabindex=0>Search</div></div></form>"]);
+  sheet.appendRow(["Main Menu Type", "Link"]);
+  sheet.appendRow(["Main Menu Direction", "Horizontal"]);
+  sheet.appendRow(["Main Menu Selection Html"]);
+  sheet.appendRow(["Main Menu Selected Html"]);
+  sheet.appendRow(["Background Image Urls", "/images/BackgroundImage02.jpg", "/images/GreaterWidthRatioScaleUp.png", "http://www.spektyr.com/PrintImages/Cerulean%20Cross%203%20Large.jpg"]);
+  sheet.appendRow(["Background Image Duration Seconds", "5", "5", "5"]);
+  sheet.appendRow(["Content Menu Item Name", "Solid State Lighting", "", "", ""]);
+  sheet.appendRow(["Content Menu Item Link", "http://sites.google.com/site/solidstatelamps/", "", "", ""]);
+  sheet.appendRow(["Content Menu Style Sheet", "", "", "", ""]);
+  sheet.appendRow(["Content Layout", "Left sidebar", "", "", ""]);
+  sheet.appendRow(["Content Header", "<span style=\"font-size:24px\">Introducing the UR<font color=\"#00ff00\">LeD</font>&trade; 100,000 hour solid state A19 lamp from <span style=\"font-family:Aldrich,arial,sans-serif;font-style:italic;font-weight:normal\"><font color=\"#ffffff\">The</font><font color=\"#00ff00\">Green</font><font color=\"#ffffff\">URL</font></span><sup><font color=\"#ffffff\" size=\"2\">&reg;</font></sup></span>", "", "", ""]);
+  sheet.appendRow(["Content Column One", "UR<font color=\"#00ff00\">LeD</font>&trade; 6 watt lamps are the first 60 watt incandescent or 12 watt compact fluorescent general purpose replacement bulb to offer a lifetime warranty. Relamping with a&nbsp;UR<font color=\"#00ff00\">LeD</font>&trade; solid state lamp can save as much as $10 a year in electricity and may even eliminate the need to buy a bulb again.  <div><br> </div> <div>With most lamps lifespan depends on many factors, but in the case of LED lighting, it's all about thermal management. Like all semiconductors, solid state light emitting diods are degraded or damaged as the result of operating at high temperatures, not operating for long periods of time or being switched on and off. That's why <font color=\"#00ff00\">U</font>niversally <font color=\"#00ff00\">R</font>ecyclable <font color=\"#00ff00\">L</font>ighting&trade; puts 2.2 onces of aluminum heat sink at the core of each lamp, in order to maintain a low junction temperature and thus ensure high performance, high efficiency and long life out of each of the 77 Epistar Superbright SMD 3528 LEDs.</div> <div><br> </div> <div>A UR<font color=\"#00ff00\">LeD</font>&trade; lamp produces as much light as a conventional 60 watt light bulb yet only uses 6 watts and doesn't contain harmfull mercury or produce ultraviolet radiation. Plus, if your lamp ever burns out or diminishes in luminosity by more than 25% we'll replace it free of charge. That means that at todays energy prices a UR<font color=\"#00ff00\">LeD</font>&trade; lamp will typically pay for itself within two years, and since it doesn't need to be replaced, the savings won't stop there.</div> <div><br> </div> <div>Switching from traditional light bulbs to solid state lighting may seem like a burdon at first, but it doesn't have to be. After all, a light bulb's closest relative is the vacum tube, and if history has anything to teach us it's that \"in general\" we're better off with solid state TV's, flat screen monitors and digital cameras than we were with vacum tubes. The same is true with solid state lighting. Burned out bulbs, dimly lit homes and remembering to turn off the lights can literally be a thing of the past. After all, at 6 watts a UR<font color=\"#00ff00\">LeD</font>&trade; lamp uses less electricity than a typical night light.</div> <div><br> </div> <div>We want to help you step into the future of lighting with Solid State Lamps by making it as inexpensive, easy and risk free as possible. That's why we've selected UR<font color=\"#00ff00\">LeD</font>&trade; lamps and are offering them to you in the following packages, each of which comes with our unprecedented warranty and free shipping as well as increased savings over the previous package.</div> <div> <hr> <br> </div> <table border=\"1\" style=\"width:100%;border-collapse:collapse\"> <tbody> <tr> <td style=\"width:33.33%;background-color:#606060;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">One UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; lamp only $20</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Start saving today</font></font></div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/1_Lamp.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/1_Lamp.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">One UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; 100,000 hour A19 solid state LED bulb with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_s-xclick&amp;hosted_button_id=EXMWD68889Z46\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#707070;text-align:center\"> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; lamps only $80</font> </font> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Save $20</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/5_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/5_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; 100,000 hour A19 solid state LED light bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#808080;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Ten UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; lamps only $140</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Save $60</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/10_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/10_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Ten UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; 100,000 hour A19 solid state LED light bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> </tr> <tr> <td style=\"width:33.33%;background-color:#909090;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Fifteen UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; lamps only $200</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Save $100</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/15_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/15_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Fifteen UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; 100,000 hour A19 solid state LED light bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#a0a0a0;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; lamps only $260</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Save $140</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/20_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/20_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty UR</font><font color=\"#00ff00\">LeD</font> <font color=\"#000000\">&trade; 100,000 hour A19 solid state LED bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#b0b0b0;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; lamps only $320</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Save $180</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/25_Lamps3.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/25_Lamps3.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; 100,000 hour A19 solid state LED bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> </tr> </tbody> </table>", "", "", ""]);
+  sheet.appendRow(["Content Column Two", "", "", "", ""]);
+  sheet.appendRow(["Content Column Three", "", "", "", ""]);
+  sheet.appendRow(["Content Left Sidebar", "<div style=\"display:block;text-align:left\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/technology/Logo6.png\" style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> </div> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-weight:bold\"><span style=\"font-size:medium\"><span style=\"font-family:arial,sans-serif\"><font><font color=\"#134f5c\"><br> </font></font></span></span></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-weight:bold\"><span style=\"font-size:medium\"><span style=\"font-family:arial,sans-serif\"><font><font color=\"#134f5c\">Store Hours</font></font></span></span></span></p> <hr> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\">Monday-Friday&nbsp;</font></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\"><span style=\"font-size:x-small\">9:00AM - 5:00PM</span></font></span> </p> <font face=\"arial, sans-serif\"> <hr> </font> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\">Saturday&nbsp;</font></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><span style=\"font-size:x-small\"><font color=\"#444444\">10:00AM - 4:00PM</font></span></span></p> <font face=\"arial, sans-serif\"> <hr> </font> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\">Sunday&nbsp;</font></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><span style=\"font-size:x-small\"><font color=\"#444444\">12:00PM - 6:00PM</font></span></span></p> <hr> <div style=\"display:block;text-align:left\"> <div style=\"display:block;text-align:left\"><img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/PayPal2.png\" style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"></div> </div> <div style=\"text-align:left\"><br> </div> ", "", "", ""]);
+  sheet.appendRow(["Content Right Sidebar", "", "", "", ""]);
+  sheet.appendRow(["Content Footer", "<span style=\"font-size:24px\">Introducing the UR<font color=\"#00ff00\">LeD</font>&trade; 100,000 hour solid state A19 lamp from <span style=\"font-family:Aldrich,arial,sans-serif;font-style:italic;font-weight:normal\"><font color=\"#ffffff\">The</font><font color=\"#00ff00\">Green</font><font color=\"#ffffff\">URL</font></span><sup><font color=\"#ffffff\" size=\"2\">&reg;</font></sup></span>", "", "", ""]);
+  sheet.appendRow(["Message Header Text", "<font color=#ffc000>The easiest way to create a beautiful enterprise class web application</font>", "Five URLeD™ lamp only $80 save $20", "", ""]);
+  sheet.appendRow(["Message Body Text", "Whether you need simple pages, striking galleries, a professional blog, or an online store, it's all possible with SitesWrapper. Everything is mobile-ready and search engine optimized. Best of all, it's free!", "", ""]);
+  sheet.appendRow(["Message Information Item", "URLeCycle", "none", "", ""]);
+  sheet.appendRow(["Message Html Color Code", "#cccccc", "#cccccc", "", ""]);
+  sheet.appendRow(["Message Width Percent Of Page", "0.15", "0.05", "", ""]);
+  sheet.appendRow(["Message Percent Of Page From Left", "0.05", "0.2", "", ""]);
+  sheet.appendRow(["Message Percent Of Page From Top", "0.25", "0.5", "", ""]);
+  sheet.appendRow(["Message Duration Seconds", "5", "0.05", "", ""]);
+  sheet.setColumnWidth(1, 225);
+  sheet.setColumnWidth(2, 200);
+  sheet.setColumnWidth(3, 200);
+  sheet.setColumnWidth(4, 200);
+}
+
+/*
+ * initializeSecondPage
+ * 
+ * Creates a new sheet with an arbitrary name (a page in the site) and populates it with a default configuration.
+ */
+function initializeSecondPage() {
+  document.insertSheet('Themes', 5);
+  sheet = document.setActiveSheet(document.getSheets()[5]);
+  sheet.appendRow(["Page Name", "Themes"]);
+  sheet.appendRow(["Show Page Title", "Yes"]);
+  sheet.appendRow(["Logo Image", "https://c824ff113391b7c600d1069f19350d6607b580e1.googledrive.com/host/0BzPelJUA_7zUT3ZfQVdNcmwzbDg/SitesWrapperLogoLarge300x39.png", "", "", ""]);
+  sheet.appendRow(["Logo Html", "<h1><span style='font-family:Aldrich,arial,sans-serif;font-style:italic;font-weight:normal'><font color=#ffffff>The</font><font color=#ff0000>Red</font><font color=#ffffff>URL</font></span><sup><font color=#ffffff size=2>&reg;</font></sup></h1>"]);
+  sheet.appendRow(["Display Logo As", "Image"]);
+  sheet.appendRow(["Language Translation Enabled", "No"]);
+  sheet.appendRow(["Translated Languages", "en", "es"]);
+  sheet.appendRow(["Custom Search Enabled", "Yes"]);
+  sheet.appendRow(["Custom Search Urls", "<form id=sites-searchbox-form action=/site/poultryledlighting/system/app/pages/search><input type=hidden id=sites-searchbox-scope name=scope value=search-site /><input type=text id=jot-ui-searchInput name=q size=20 value= aria-label=\"Search this site\" autocomplete=off /><div id=sites-searchbox-button-set class=goog-inline-block><div role=button id=sites-searchbox-search-button class=\"goog-inline-block jfk-button jfk-button-standard\" tabindex=0>Search</div></div></form>"]);
+  sheet.appendRow(["Main Menu Type", "Link"]);
+  sheet.appendRow(["Main Menu Direction", "Horizontal"]);
+  sheet.appendRow(["Main Menu Selection Html"]);
+  sheet.appendRow(["Main Menu Selected Html"]);
+  sheet.appendRow(["Background Image Urls", "/images/SitesWrapperAbout.jpg", "/images/GreaterWidthRatioScaleUp.png", "http://www.spektyr.com/PrintImages/Cerulean%20Cross%203%20Large.jpg"]);
+  sheet.appendRow(["Background Image Duration Seconds", "5", "5", "5"]);
+  sheet.appendRow(["Content Menu Item Name", "Solid State Lighting", "", "", ""]);
+  sheet.appendRow(["Content Menu Item Link", "http://sites.google.com/site/solidstatelamps/", "", "", ""]);
+  sheet.appendRow(["Content Menu Style Sheet", "", "", "", ""]);
+  sheet.appendRow(["Content Layout", "Left sidebar", "", "", ""]);
+  sheet.appendRow(["Content Header", "<span style=\"font-size:24px\">Introducing the UR<font color=\"#00ff00\">LeD</font>&trade; 100,000 hour solid state A19 lamp from <span style=\"font-family:Aldrich,arial,sans-serif;font-style:italic;font-weight:normal\"><font color=\"#ffffff\">The</font><font color=\"#00ff00\">Green</font><font color=\"#ffffff\">URL</font></span><sup><font color=\"#ffffff\" size=\"2\">&reg;</font></sup></span>", "", "", ""]);
+  sheet.appendRow(["Content Column One", "UR<font color=\"#00ff00\">LeD</font>&trade; 6 watt lamps are the first 60 watt incandescent or 12 watt compact fluorescent general purpose replacement bulb to offer a lifetime warranty. Relamping with a&nbsp;UR<font color=\"#00ff00\">LeD</font>&trade; solid state lamp can save as much as $10 a year in electricity and may even eliminate the need to buy a bulb again.  <div><br> </div> <div>With most lamps lifespan depends on many factors, but in the case of LED lighting, it's all about thermal management. Like all semiconductors, solid state light emitting diods are degraded or damaged as the result of operating at high temperatures, not operating for long periods of time or being switched on and off. That's why <font color=\"#00ff00\">U</font>niversally <font color=\"#00ff00\">R</font>ecyclable <font color=\"#00ff00\">L</font>ighting&trade; puts 2.2 onces of aluminum heat sink at the core of each lamp, in order to maintain a low junction temperature and thus ensure high performance, high efficiency and long life out of each of the 77 Epistar Superbright SMD 3528 LEDs.</div> <div><br> </div> <div>A UR<font color=\"#00ff00\">LeD</font>&trade; lamp produces as much light as a conventional 60 watt light bulb yet only uses 6 watts and doesn't contain harmfull mercury or produce ultraviolet radiation. Plus, if your lamp ever burns out or diminishes in luminosity by more than 25% we'll replace it free of charge. That means that at todays energy prices a UR<font color=\"#00ff00\">LeD</font>&trade; lamp will typically pay for itself within two years, and since it doesn't need to be replaced, the savings won't stop there.</div> <div><br> </div> <div>Switching from traditional light bulbs to solid state lighting may seem like a burdon at first, but it doesn't have to be. After all, a light bulb's closest relative is the vacum tube, and if history has anything to teach us it's that \"in general\" we're better off with solid state TV's, flat screen monitors and digital cameras than we were with vacum tubes. The same is true with solid state lighting. Burned out bulbs, dimly lit homes and remembering to turn off the lights can literally be a thing of the past. After all, at 6 watts a UR<font color=\"#00ff00\">LeD</font>&trade; lamp uses less electricity than a typical night light.</div> <div><br> </div> <div>We want to help you step into the future of lighting with Solid State Lamps by making it as inexpensive, easy and risk free as possible. That's why we've selected UR<font color=\"#00ff00\">LeD</font>&trade; lamps and are offering them to you in the following packages, each of which comes with our unprecedented warranty and free shipping as well as increased savings over the previous package.</div> <div> <hr> <br> </div> <table border=\"1\" style=\"width:100%;border-collapse:collapse\"> <tbody> <tr> <td style=\"width:33.33%;background-color:#606060;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">One UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; lamp only $20</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Start saving today</font></font></div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/1_Lamp.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/1_Lamp.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">One UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; 100,000 hour A19 solid state LED bulb with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_s-xclick&amp;hosted_button_id=EXMWD68889Z46\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#707070;text-align:center\"> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; lamps only $80</font> </font> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Save $20</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/5_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/5_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; 100,000 hour A19 solid state LED light bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#808080;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Ten UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; lamps only $140</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Save $60</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/10_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/10_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#ffffff\">Ten UR</font><font color=\"#00ff00\">LeD</font><font color=\"#ffffff\">&trade; 100,000 hour A19 solid state LED light bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> </tr> <tr> <td style=\"width:33.33%;background-color:#909090;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Fifteen UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; lamps only $200</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Save $100</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/15_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/15_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Fifteen UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; 100,000 hour A19 solid state LED light bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#a0a0a0;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; lamps only $260</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Save $140</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/20_Lamps.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/20_Lamps.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty UR</font><font color=\"#00ff00\">LeD</font> <font color=\"#000000\">&trade; 100,000 hour A19 solid state LED bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> <td style=\"width:33.33%;background-color:#b0b0b0;text-align:center\"> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; lamps only $320</font> </font> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Save $180</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"https://sites.google.com/site/solidstatelamps/home/25_Lamps3.png?attredirects=0\" imageanchor=\"1\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/25_Lamps3.png\"> </a> </div> <div> <font size=\"2\" style=\"font-style:normal\"> <font color=\"#000000\">Twenty five UR</font><font color=\"#00ff00\">LeD</font><font color=\"#000000\">&trade; 100,000 hour A19 solid state LED bulbs with lifetime warranty and free shipping in the</font>&nbsp; <font color=\"#ff0000\">U</font> <font color=\"#ffffff\">S</font> <font color=\"#0000ff\">A</font> </font> </div> <div style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> <a href=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\" imageanchor=\"1\"> <img border=\"0\" src=\"http://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif\"> </a> </div> </td> </tr> </tbody> </table>", "", "", ""]);
+  sheet.appendRow(["Content Column Two", "", "", "", ""]);
+  sheet.appendRow(["Content Column Three", "", "", "", ""]);
+  sheet.appendRow(["Content Left Sidebar", "<div style=\"display:block;text-align:left\"> <img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/technology/Logo6.png\" style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"> </div> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-weight:bold\"><span style=\"font-size:medium\"><span style=\"font-family:arial,sans-serif\"><font><font color=\"#134f5c\"><br> </font></font></span></span></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-weight:bold\"><span style=\"font-size:medium\"><span style=\"font-family:arial,sans-serif\"><font><font color=\"#134f5c\">Store Hours</font></font></span></span></span></p> <hr> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\">Monday-Friday&nbsp;</font></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\"><span style=\"font-size:x-small\">9:00AM - 5:00PM</span></font></span> </p> <font face=\"arial, sans-serif\"> <hr> </font> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\">Saturday&nbsp;</font></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><span style=\"font-size:x-small\"><font color=\"#444444\">10:00AM - 4:00PM</font></span></span></p> <font face=\"arial, sans-serif\"> <hr> </font> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;font-size:14px;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><font color=\"#444444\">Sunday&nbsp;</font></span></p> <p style=\"text-align:center;margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;font-style:normal;font-variant:normal;font-weight:normal;line-height:normal\"><span style=\"font-family:arial,sans-serif\"><span style=\"font-size:x-small\"><font color=\"#444444\">12:00PM - 6:00PM</font></span></span></p> <hr> <div style=\"display:block;text-align:left\"> <div style=\"display:block;text-align:left\"><img border=\"0\" src=\"https://sites.google.com/site/solidstatelamps/home/PayPal2.png\" style=\"display:block;margin-right:auto;margin-left:auto;text-align:center\"></div> </div> <div style=\"text-align:left\"><br> </div> ", "", "", ""]);
+  sheet.appendRow(["Content Right Sidebar", "", "", "", ""]);
+  sheet.appendRow(["Content Footer", "<span style=\"font-size:24px\">Introducing the UR<font color=\"#00ff00\">LeD</font>&trade; 100,000 hour solid state A19 lamp from <span style=\"font-family:Aldrich,arial,sans-serif;font-style:italic;font-weight:normal\"><font color=\"#ffffff\">The</font><font color=\"#00ff00\">Green</font><font color=\"#ffffff\">URL</font></span><sup><font color=\"#ffffff\" size=\"2\">&reg;</font></sup></span>", "", "", ""]);
+  sheet.appendRow(["Message Header Text", "<font color=#ffc000>SitesWrapper makes it simple to create a beautiful, professional web presence</font>", "Five URLeD™ lamp only $80 save $20", "", ""]);
+  sheet.appendRow(["Message Body Text", "Promote your business, showcase your art, set up an online shop or just sharpen your Java programming skills. SitesWrapper is a website builder that has everything you need to build enterprise class web presence free. Browse our collection of beautiful website templates. You'll find loads of stunning designs, ready to be customized.", "", ""]);
+  sheet.appendRow(["Message Information Item", "URLeCycle", "none", "", ""]);
+  sheet.appendRow(["Message Html Color Code", "#cccccc", "#cccccc", "", ""]);
+  sheet.appendRow(["Message Width Percent Of Page", "0.15", "0.05", "", ""]);
+  sheet.appendRow(["Message Percent Of Page From Left", "0.66", "0.2", "", ""]);
+  sheet.appendRow(["Message Percent Of Page From Top", "0.33", "0.5", "", ""]);
+  sheet.appendRow(["Message Duration Seconds", "5", "0.05", "", ""]);
+  sheet.setColumnWidth(1, 200);
+  sheet.setColumnWidth(2, 200);
+  sheet.setColumnWidth(3, 200);
+  sheet.setColumnWidth(4, 200);
+}
+
+/*
+ * Google provided example functions below.
+ */
 // getRowsData iterates row by row in the input range and returns an array of objects.
 // Each object contains all the data for a given row, indexed by its normalized column name.
 // Arguments:
