@@ -35,27 +35,57 @@ var styleConfigurationSheet = document.getSheetByName("StyleConfiguration");
 var landingConfigurationSheet = document.getSheetByName("LandingConfiguration");
 var pageConfigurationSheet = document.getSheetByName("PageConfiguration");
 var informationConfigurationSheet = document.getSheetByName("InformationConfiguration");
-var menuEntries = [{name: "Initialize Configuration", functionName: "initialize"},
-                   {name: "Update " + document.getName() + " configuration", functionName: "updateConfiguration"},
-                   {name: "Display DocumentId", functionName: "displayConfigurationDocumentId"} ];
+//var menuEntries = [{name: "Initialize Configuration", functionName: "initialize"},
+                   //{name: "Update " + document.getName() + " configuration", functionName: "updateConfiguration"},
+                   //{name: "Display DocumentId", functionName: "displayConfigurationDocumentId"} ];
 
 /*
  * onOpen()
  * 
- * Adds a main menu to the Apps Script Configuration Client.
+ * Adds a SitesWrapper menu to the Apps Script Configuration Client.
  */
 function onOpen() {
-  document.addMenu("SitesWrapper", menuEntries);
-  SpreadsheetApp.getUi().createMenu('Dialog').addItem('Open', 'openDialog').addToUi();
-  var html = HtmlService.createHtmlOutputFromFile('index');
-  SpreadsheetApp.getUi().showSidebar(html);
-}
-
-//function openDialog() {
+  //document.addMenu("SitesWrapper", menuEntries);
+  SpreadsheetApp.getUi().createMenu('SitesWrapper').addItem('Open menu', 'sitesWrapperMenu').addToUi();
   //var html = HtmlService.createHtmlOutputFromFile('index');
   //SpreadsheetApp.getUi().showSidebar(html);
-//}
+}
 
+/*
+ * sitesWrapperMenu()
+ * 
+ * Determines by HTTP response code if the datastore has been initialized with a DocumentId object and if not, sends
+ * an mail to the Server Service Wrapper containing the document id of the spreadsheet managed by this Apps Script.
+ * Once the DocumentId object exists, sheets in the spreadsheet are created and populated with a default configuration
+ * and the sidebar menu, index.html, is displayed.
+ */
+function sitesWrapperMenu() {
+  var headers = {};
+  var payload = {};
+  var options = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:payload};
+  var responseCode = UrlFetchApp.fetch(url + initializationUri, options).getResponseCode();
+  if (responseCode == 204) {
+    MailApp.sendEmail({
+      to: "siteswrapper-gae-gwt@" + documentName + ".appspotmail.com",
+      subject: documentName,
+      body: documentId });
+    while (responseCode != 202) {
+      Utilities.sleep(500);
+      responseCode = UrlFetchApp.fetch(url + initializationUri, options).getResponseCode();
+    }
+    initializeSite();
+    initializeStyles();
+    initializeLandings();
+    initializeItems();
+    initializeFirstPage();
+    initializeSecondPage();
+    var html = HtmlService.createHtmlOutputFromFile('index');
+    SpreadsheetApp.getUi().showSidebar(html);
+  } else if (responseCode == 202) {
+    var html = HtmlService.createHtmlOutputFromFile('index');
+    SpreadsheetApp.getUi().showSidebar(html);
+  }
+}
 
 /*
  * initialize()
@@ -65,6 +95,7 @@ function onOpen() {
  * Once the DocumentId object exists, sheets in the spreadsheet are created and populated with a default configuration.
  */
 function initialize () {
+  document.toast("Initializing SitesWrapper", "Initialize", 3);
   var headers = {};
   var payload = {};
   var options = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:payload};
@@ -103,6 +134,7 @@ function displayConfigurationDocumentId () {
  * commits the new configuration to the datastore.
  */
 function updateConfiguration() {
+  document.toast("Initializing SitesWrapper, please wait", "Initialize", 8);
   try {
     updateSiteConfiguration();
     updateStyleConfiguration();
@@ -719,8 +751,6 @@ function commitConfigurationChanges() {
   if (DEBUG != true) {
     if (UrlFetchApp.fetch(url + commitConfigurationUri, advancedArguments).getContentText() != documentId) {
       throw "COMMIT OF NEW CONFIGURATION IN APP ENGINE DATASTORE FOR PAGE FAILED";
-    } else {
-      Browser.msgBox("Update of " + document.getName() + " configuration successfull");
     }
   }
 }
