@@ -37,18 +37,18 @@ var pageConfigurationSheet = document.getSheetByName("PageConfiguration");
 var informationConfigurationSheet = document.getSheetByName("InformationConfiguration");
 //var menuEntries = [{name: "Initialize Configuration", functionName: "initialize"},
                    //{name: "Update " + document.getName() + " configuration", functionName: "updateConfiguration"},
-                   //{name: "Display DocumentId", functionName: "displayConfigurationDocumentId"} ];
+                   //{name: "Display DocumentId", functionName: "displayConfigurationId"} ];
 
 /*
  * onOpen()
  * 
- * Adds a SitesWrapper menu to the Apps Script Configuration Client.
+ * Adds a SitesWrapper sidebar menu to the Apps Script Configuration Client.
  */
 function onOpen() {
   //document.addMenu("SitesWrapper", menuEntries);
-  SpreadsheetApp.getUi().createMenu('SitesWrapper').addItem('Open menu', 'sitesWrapperMenu').addToUi();
+  //SpreadsheetApp.getUi().createMenu('SitesWrapper').addItem('Open sidebar menu', 'sitesWrapperMenu').addToUi();
   //var html = HtmlService.createHtmlOutputFromFile('index');
-  //SpreadsheetApp.getUi().showSidebar(html);
+  SpreadsheetApp.getUi().showSidebar(HtmlService.createHtmlOutputFromFile('index'));
 }
 
 /*
@@ -95,7 +95,7 @@ function sitesWrapperMenu() {
  * Once the DocumentId object exists, sheets in the spreadsheet are created and populated with a default configuration.
  */
 function initialize () {
-  document.toast("Initializing SitesWrapper", "Initialize", 3);
+  //document.toast("Initializing SitesWrapper", "Initialize", 3);
   var headers = {};
   var payload = {};
   var options = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:payload};
@@ -124,64 +124,66 @@ function initialize () {
  * Displays the Google Docs document id to the user. This id is unique and used as a key to enable the
  * configuration clients to update the datastore.
  */
-function displayConfigurationDocumentId () {
-  Browser.msgBox("The GoogleDocsConfigurationDocumentId for this webapp is " + documentId +
-                 "The GoogleDocsConfigurationDocumentUrl for this webapp is " + documentUrl);
+function displayConfigurationId () {
+  Browser.msgBox("The " + documentName + " configuration id is " + documentId);
 }
 
 /*
- * Convenience method which sandboxes the external calls to UrlFetchApp in a try-catch block and
- * commits the new configuration to the datastore.
+ * updateConfiguration()
+ *
+ * Determines by HTTP response code if the datastore has been initialized with a DocumentId object and if not, sends
+ * an mail to the Server Service Wrapper containing the document id of the spreadsheet managed by this Apps Script.
+ * Once the DocumentId object exists, sheets in the spreadsheet are created and populated with a default configuration
+ * and the datastore is updated. If the datastore has already been initialized and populated with a configuration, the
+ * datastore configuration is simply updated to match the contents of the spreadsheet.
  */
 function updateConfiguration() {
-  document.toast("Initializing SitesWrapper, please wait", "Initialize", 8);
-  try {
-    updateSiteConfiguration();
-    updateStyleConfiguration();
-    updateLandingConfiguration();
-    updatePageConfiguration();
-    updateInformationConfiguration();
-    commitConfigurationChanges();
-  } catch(err) {
-    if (err == "NO VALUE SPECIFIED FOR SITE NAME IN SITECONFIGURATION WORKSHEET") {
-      Browser.msgBox("UPDATE ABORTED - NO VALUE SPECIFIED FOR Site Name IN SITECONFIGURATION WORKSHEET");
-      return;
-    } else if (err == "NO VALUE SPECIFIED FOR GOOGLE APP ENGINE APPLICATION IN SITECONFIGURATION WORKSHEET") {
-      Browser.msgBox("UPDATE ABORTED - NO VALUE SPECIFIED FOR GOOGLE APP ENGINE APPLICATION IN SITECONFIGURATION WORKSHEET");
-      return;
-    } else if (err == "NO VALUE SPECIFIED FOR GOOGLE APP ENGINE VERSION IN SITECONFIGURATION WORKSHEET") {
-      Browser.msgBox("UPDATE ABORTED - NO VALUE SPECIFIED FOR GOOGLE APP ENGINE VERSION IN SITECONFIGURATION WORKSHEET");
-      return;
-    } else if (err == "NO VALUE SPECIFIED FOR LOOK AND FEEL IN SITECONFIGURATION WORKSHEET") {
-      Browser.msgBox("UPDATE ABORTED - NO VALUE SPECIFIED FOR LOOK AND FEEL IN SITECONFIGURATION WORKSHEET");
-      return;
-    } else if (err == "NO VALUE SPECIFIED FOR THEME IN SITECONFIGURATION WORKSHEET") {
-      Browser.msgBox("UPDATE ABORTED - NO VALUE SPECIFIED FOR Theme IN SITECONFIGURATION WORKSHEET");
-      return;
-    } else if (err == "NO VALUE SPECIFIED FOR GOOGLE WEB FONTS URL IN SITECONFIGURATION WORKSHEET") {
-      Browser.msgBox("UPDATE ABORTED - NO VALUE SPECIFIED FOR Google Web Fonts Url IN SITECONFIGURATION WORKSHEET");
-      return;
-    } else if (err == "NO VALUE SPECIFIED FOR FAVICON URL IN SITECONFIGURATION WORKSHEET") {
-      Browser.msgBox("UPDATE ABORTED - NO VALUE SPECIFIED FOR Favicon Url IN SITECONFIGURATION WORKSHEET");
-      return;
-    } else if (err == "NO VALUE SPECIFIED FOR DEFAULT LANDING PAGE IN SITECONFIGURATION WORKSHEET") {
-      Browser.msgBox("UPDATE ABORTED - NO VALUE SPECIFIED FOR Default Landing Page IN SiteConfiguration WORKSHEET");
-      return;
-    } else if (err == "DELETE OF CURRENT SITECONFIGURATION JDO IN APP ENGINE DATASTORE FAILED") {
-      Browser.msgBox("UPDATE ABORTED - DELETE OF CURRENT SiteConfiguration JDO IN APP ENGINE DATASTORE FAILED");
-      return;
-    } else {
-      Browser.msgBox(err);
+  var headers = {};
+  var payload = {};
+  var options = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:payload};
+  var responseCode = UrlFetchApp.fetch(url + initializationUri, options).getResponseCode();
+  if (responseCode == 204) {
+    document.toast("Initializing client configuration and binding to " + documentName + ".appspot.com", "Initialize Configuration", 10);
+    MailApp.sendEmail({
+      to: "siteswrapper-gae-gwt@" + documentName + ".appspotmail.com",
+      subject: documentName,
+      body: documentId });
+    while (responseCode != 202) {
+      Utilities.sleep(500);
+      responseCode = UrlFetchApp.fetch(url + initializationUri, options).getResponseCode();
+    }
+    initializeSite();
+    initializeStyles();
+    initializeLandings();
+    initializeItems();
+    initializeFirstPage();
+    initializeSecondPage();
+    //document.toast("Client initialization complete. Run Update Configuration again to complete server initialization.", "Update Configuration", 5);
+    Utilities.sleep(500);
+    updateConfiguration();
+  } else if (responseCode == 202) {
+    document.toast("Updating " + documentName + " configuration", "Update Configuration", 10);
+    try {
+      updateSiteConfiguration();
+      updateStyleConfiguration();
+      updateLandingConfiguration();
+      updatePageConfiguration();
+      updateInformationConfiguration();
+      commitConfigurationChanges();
+    } catch(err) {
+      Browser.msgBox("Update aborted: " + err);
       return;
     }
-  }
+  }  
 }
 
 /*
  * Updates the Site object in the datastore.
  */
 function updateSiteConfiguration() {
-  var configurationParameters = getColumnsData(siteConfigurationSheet, siteConfigurationSheet.getRange("B1:B" + siteConfigurationSheet.getLastRow()));
+  //document.setActiveSheet(document.getSheets()[0]);
+  //var configurationParameters = getColumnsData(siteConfigurationSheet, siteConfigurationSheet.getRange("B1:B" + siteConfigurationSheet.getLastRow()));
+  var configurationParameters = getColumnsData(document.getSheets()[0], document.getSheets()[0].getRange("B1:B" + document.getSheets()[0].getLastRow()));
   var siteAttributes = "";
   if (typeof configurationParameters[0].siteName == "undefined") {
     throw "NO VALUE SPECIFIED FOR SITE NAME IN SITECONFIGURATION WORKSHEET";
@@ -258,11 +260,16 @@ function updateSiteConfiguration() {
  * Creates a new collection of Style objects in the datastore.
  */
 function updateStyleConfiguration() {
-  var maxColumns = styleConfigurationSheet.getLastColumn() + 1;
-  var lookAndFeelTypes = getColumnsData(styleConfigurationSheet,
-                                    styleConfigurationSheet.getRange("B1:" +
-                                    styleConfigurationSheet.getLastColumn() +
-                                    styleConfigurationSheet.getLastRow()));
+  //var maxColumns = styleConfigurationSheet.getLastColumn() + 1;
+  //var lookAndFeelTypes = getColumnsData(styleConfigurationSheet,
+  //                                  styleConfigurationSheet.getRange("B1:" +
+  //                                  styleConfigurationSheet.getLastColumn() +
+  //                                  styleConfigurationSheet.getLastRow()));
+  var maxColumns = document.getSheets()[1].getLastColumn() + 1;
+  var lookAndFeelTypes = getColumnsData(document.getSheets()[1],
+                                    document.getSheets()[1].getRange("B1:" +
+                                    document.getSheets()[1].getLastColumn() +
+                                    document.getSheets()[1].getLastRow()));
   for (lookAndFeelType = 0; lookAndFeelType < lookAndFeelTypes.length; lookAndFeelType++) {
     var lookAndFeelTypeParameters = "";
     if (typeof lookAndFeelTypes[lookAndFeelType].lookAndFeel == "undefined") {
@@ -337,11 +344,16 @@ function updateStyleConfiguration() {
  * Creates a new collection of Landing objects in the datastore.
  */
 function updateLandingConfiguration() {
-  var maxColumns = landingConfigurationSheet.getLastColumn() + 1;
-  var landings = getColumnsData(landingConfigurationSheet,
-                                    landingConfigurationSheet.getRange("B1:" +
-                                    landingConfigurationSheet.getLastColumn() +
-                                    landingConfigurationSheet.getLastRow()));
+  //var maxColumns = landingConfigurationSheet.getLastColumn() + 1;
+  //var landings = getColumnsData(landingConfigurationSheet,
+  //                                  landingConfigurationSheet.getRange("B1:" +
+  //                                  landingConfigurationSheet.getLastColumn() +
+  //                                  landingConfigurationSheet.getLastRow()));
+  var maxColumns = document.getSheets()[2].getLastColumn() + 1;
+  var landings = getColumnsData(document.getSheets()[2],
+                                    document.getSheets()[2].getRange("B1:" +
+                                    document.getSheets()[2].getLastColumn() +
+                                    document.getSheets()[2].getLastRow()));
   for (landing = 0; landing < landings.length; landing++) {
     var landingParameters = "";
     if (typeof landings[landing].name == "undefined") {
@@ -407,6 +419,90 @@ function updateLandingConfiguration() {
       var advancedArguments = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:landingParameters};
       if (UrlFetchApp.fetch(url + landingUpdateUri, advancedArguments).getContentText() != documentId) {
         throw "CREATION OF NEW LandingConfiguration OBJECT IN APP ENGINE DATASTORE FOR PAGE FAILED";
+      } 
+    }
+  }
+}
+
+/*
+ * Creates a new collection of Items in the datastore.
+ */
+function updateInformationConfiguration() {
+  //var maxColumns = informationConfigurationSheet.getLastColumn() + 1;
+  //var informationItems = getColumnsData(informationConfigurationSheet,
+  //                                  informationConfigurationSheet.getRange("B1:" +
+  //                                  informationConfigurationSheet.getLastColumn() +
+  //                                  informationConfigurationSheet.getLastRow()));
+  var maxColumns = document.getSheets()[3].getLastColumn() + 1;
+  var informationItems = getColumnsData(document.getSheets()[3],
+                                    document.getSheets()[3].getRange("B1:" +
+                                    document.getSheets()[3].getLastColumn() +
+                                    document.getSheets()[3].getLastRow()));
+  for (informationItem = 0; informationItem < informationItems.length; informationItem++) {
+    var informationItemParameters = "";
+    if (typeof informationItems[informationItem].name == "undefined") {
+      throw "NO VALUE SPECIFIED FOR Name IN InformationConfiguration SHEET COLUMN " + informationItem;
+    } else {
+      informationItemParameters = "name=" + escape(informationItems[informationItem].name);
+    }
+    if (typeof informationItems[informationItem].type == "undefined") {
+      throw "NO VALUE SPECIFIED FOR Type IN InformationConfiguration SHEET COLUMN " + informationItem;
+    } else {
+      informationItemParameters += "&type=" + escape(informationItems[informationItem].type);
+    }
+    if (typeof informationItems[informationItem].description == "undefined") {
+      throw "NO VALUE SPECIFIED FOR Description IN InformationConfiguration SHEET COLUMN " + informationItem;
+    } else {
+      informationItemParameters += "&description=" + escape(informationItems[informationItem].description);
+    }
+    if (typeof informationItems[informationItem].videoUrl == "undefined") {
+      throw "NO VALUE SPECIFIED FOR Video Url IN InformationConfiguration SHEET COLUMN " + informationItem;
+    } else {
+      informationItemParameters += "&videoUrl=" + escape(informationItems[informationItem].videoUrl);
+    }
+    if (typeof informationItems[informationItem].imageUrl == "undefined") {
+      throw "NO VALUE SPECIFIED FOR Image Url IN InformationConfiguration SHEET COLUMN " + informationItem;
+    } else {
+      informationItemParameters += "&imageUrl=" + escape(informationItems[informationItem].imageUrl);
+    }
+    if (typeof informationItems[informationItem].linkName == "undefined") {
+      throw "NO VALUE SPECIFIED FOR Link Name IN InformationConfiguration SHEET COLUMN " + informationItem;
+    } else {
+      informationItemParameters += "&linkName=" + escape(informationItems[informationItem].linkName);
+    }
+    if (typeof informationItems[informationItem].linkUrl == "undefined") {
+      throw "NO VALUE SPECIFIED FOR Link Url IN InformationConfiguration SHEET COLUMN " + informationItem;
+    } else {
+      informationItemParameters += "&linkUrl=" + escape(informationItems[informationItem].linkUrl);
+    }
+    informationItemParameters += "&specificationOne=" + escape(informationItems[informationItem].specificationOne);
+    informationItemParameters += "&valueOne=" + escape(informationItems[informationItem].valueOne);
+    informationItemParameters += "&specificationTwo=" + escape(informationItems[informationItem].specificationTwo);
+    informationItemParameters += "&valueTwo=" + escape(informationItems[informationItem].valueTwo);
+    informationItemParameters += "&specificationThree=" + escape(informationItems[informationItem].specificationThree);
+    informationItemParameters += "&valueThree=" + escape(informationItems[informationItem].valueThree);
+    informationItemParameters += "&specificationFour=" + escape(informationItems[informationItem].specificationFour);
+    informationItemParameters += "&valueFour=" + escape(informationItems[informationItem].valueFour);
+    informationItemParameters += "&specificationFive=" + escape(informationItems[informationItem].specificationFive);
+    informationItemParameters += "&valueFive=" + escape(informationItems[informationItem].valueFive);
+    informationItemParameters += "&specificationSix=" + escape(informationItems[informationItem].specificationSix);
+    informationItemParameters += "&valueSix=" + escape(informationItems[informationItem].valueSix);
+    informationItemParameters += "&specificationSeven=" + escape(informationItems[informationItem].specificationSeven);
+    informationItemParameters += "&valueSeven=" + escape(informationItems[informationItem].valueSeven);
+    informationItemParameters += "&specificationEight=" + escape(informationItems[informationItem].specificationEight);
+    informationItemParameters += "&valueEight=" + escape(informationItems[informationItem].valueEight);
+    informationItemParameters += "&specificationNine=" + escape(informationItems[informationItem].specificationNine);
+    informationItemParameters += "&valueNine=" + escape(informationItems[informationItem].valueNine);
+    informationItemParameters += "&specificationTen=" + escape(informationItems[informationItem].specificationTen);
+    informationItemParameters += "&valueTen=" + escape(informationItems[informationItem].valueTen);
+    if (DEBUG == true) {
+      Browser.msgBox("InformationConfiguration Attributes = " + informationItemParameters);
+    } else {
+      var headers = {};
+      headers.daoId = documentId;
+      var advancedArguments = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:informationItemParameters};
+      if (UrlFetchApp.fetch(url + informationUpdateUri, advancedArguments).getContentText() != documentId) {
+        throw "CREATION OF NEW InformationConfiguration OBJECT IN APP ENGINE DATASTORE FOR PAGE FAILED";
       } 
     }
   }
@@ -662,85 +758,6 @@ function updatePageConfiguration() {
 }
 
 /*
- * Creates a new collection of Items in the datastore.
- */
-function updateInformationConfiguration() {
-  var maxColumns = informationConfigurationSheet.getLastColumn() + 1;
-  var informationItems = getColumnsData(informationConfigurationSheet,
-                                    informationConfigurationSheet.getRange("B1:" +
-                                    informationConfigurationSheet.getLastColumn() +
-                                    informationConfigurationSheet.getLastRow()));
-  for (informationItem = 0; informationItem < informationItems.length; informationItem++) {
-    var informationItemParameters = "";
-    if (typeof informationItems[informationItem].name == "undefined") {
-      throw "NO VALUE SPECIFIED FOR Name IN InformationConfiguration SHEET COLUMN " + informationItem;
-    } else {
-      informationItemParameters = "name=" + escape(informationItems[informationItem].name);
-    }
-    if (typeof informationItems[informationItem].type == "undefined") {
-      throw "NO VALUE SPECIFIED FOR Type IN InformationConfiguration SHEET COLUMN " + informationItem;
-    } else {
-      informationItemParameters += "&type=" + escape(informationItems[informationItem].type);
-    }
-    if (typeof informationItems[informationItem].description == "undefined") {
-      throw "NO VALUE SPECIFIED FOR Description IN InformationConfiguration SHEET COLUMN " + informationItem;
-    } else {
-      informationItemParameters += "&description=" + escape(informationItems[informationItem].description);
-    }
-    if (typeof informationItems[informationItem].videoUrl == "undefined") {
-      throw "NO VALUE SPECIFIED FOR Video Url IN InformationConfiguration SHEET COLUMN " + informationItem;
-    } else {
-      informationItemParameters += "&videoUrl=" + escape(informationItems[informationItem].videoUrl);
-    }
-    if (typeof informationItems[informationItem].imageUrl == "undefined") {
-      throw "NO VALUE SPECIFIED FOR Image Url IN InformationConfiguration SHEET COLUMN " + informationItem;
-    } else {
-      informationItemParameters += "&imageUrl=" + escape(informationItems[informationItem].imageUrl);
-    }
-    if (typeof informationItems[informationItem].linkName == "undefined") {
-      throw "NO VALUE SPECIFIED FOR Link Name IN InformationConfiguration SHEET COLUMN " + informationItem;
-    } else {
-      informationItemParameters += "&linkName=" + escape(informationItems[informationItem].linkName);
-    }
-    if (typeof informationItems[informationItem].linkUrl == "undefined") {
-      throw "NO VALUE SPECIFIED FOR Link Url IN InformationConfiguration SHEET COLUMN " + informationItem;
-    } else {
-      informationItemParameters += "&linkUrl=" + escape(informationItems[informationItem].linkUrl);
-    }
-    informationItemParameters += "&specificationOne=" + escape(informationItems[informationItem].specificationOne);
-    informationItemParameters += "&valueOne=" + escape(informationItems[informationItem].valueOne);
-    informationItemParameters += "&specificationTwo=" + escape(informationItems[informationItem].specificationTwo);
-    informationItemParameters += "&valueTwo=" + escape(informationItems[informationItem].valueTwo);
-    informationItemParameters += "&specificationThree=" + escape(informationItems[informationItem].specificationThree);
-    informationItemParameters += "&valueThree=" + escape(informationItems[informationItem].valueThree);
-    informationItemParameters += "&specificationFour=" + escape(informationItems[informationItem].specificationFour);
-    informationItemParameters += "&valueFour=" + escape(informationItems[informationItem].valueFour);
-    informationItemParameters += "&specificationFive=" + escape(informationItems[informationItem].specificationFive);
-    informationItemParameters += "&valueFive=" + escape(informationItems[informationItem].valueFive);
-    informationItemParameters += "&specificationSix=" + escape(informationItems[informationItem].specificationSix);
-    informationItemParameters += "&valueSix=" + escape(informationItems[informationItem].valueSix);
-    informationItemParameters += "&specificationSeven=" + escape(informationItems[informationItem].specificationSeven);
-    informationItemParameters += "&valueSeven=" + escape(informationItems[informationItem].valueSeven);
-    informationItemParameters += "&specificationEight=" + escape(informationItems[informationItem].specificationEight);
-    informationItemParameters += "&valueEight=" + escape(informationItems[informationItem].valueEight);
-    informationItemParameters += "&specificationNine=" + escape(informationItems[informationItem].specificationNine);
-    informationItemParameters += "&valueNine=" + escape(informationItems[informationItem].valueNine);
-    informationItemParameters += "&specificationTen=" + escape(informationItems[informationItem].specificationTen);
-    informationItemParameters += "&valueTen=" + escape(informationItems[informationItem].valueTen);
-    if (DEBUG == true) {
-      Browser.msgBox("InformationConfiguration Attributes = " + informationItemParameters);
-    } else {
-      var headers = {};
-      headers.daoId = documentId;
-      var advancedArguments = {method:"post", contentType:"application/x-www-form-urlencoded", headers:headers, payload:informationItemParameters};
-      if (UrlFetchApp.fetch(url + informationUpdateUri, advancedArguments).getContentText() != documentId) {
-        throw "CREATION OF NEW InformationConfiguration OBJECT IN APP ENGINE DATASTORE FOR PAGE FAILED";
-      } 
-    }
-  }
-}
-
-/*
  * Persists the newly created object to the datastore and alerts the user of completion.
  */
 function commitConfigurationChanges() {
@@ -763,6 +780,7 @@ function commitConfigurationChanges() {
  */
 function initializeSite() {
   //var activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  document.setActiveSheet(document.getSheets()[0]);
   document.renameActiveSheet("SiteConfiguration");
   var sheet = document.getActiveSheet();
   sheet.appendRow(["Site Name", "My Site"]);
