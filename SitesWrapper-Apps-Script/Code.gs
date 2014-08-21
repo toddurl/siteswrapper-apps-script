@@ -46,7 +46,16 @@ var menuEntries = [{name: "Initialize Configuration", functionName: "initialize"
  */
 function onOpen() {
   document.addMenu("SitesWrapper", menuEntries);
+  SpreadsheetApp.getUi().createMenu('Dialog').addItem('Open', 'openDialog').addToUi();
+  var html = HtmlService.createHtmlOutputFromFile('index');
+  SpreadsheetApp.getUi().showSidebar(html);
 }
+
+//function openDialog() {
+  //var html = HtmlService.createHtmlOutputFromFile('index');
+  //SpreadsheetApp.getUi().showSidebar(html);
+//}
+
 
 /*
  * initialize()
